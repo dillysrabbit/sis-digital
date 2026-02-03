@@ -128,12 +128,24 @@ export const appRouter = router({
     generatePlan: protectedProcedure
       .input(z.object({
         id: z.number(),
-        apiKey: z.string().min(1, "API Key ist erforderlich"),
+        apiKey: z.string().optional(),
       }))
       .mutation(async ({ ctx, input }) => {
         const entry = await getSisEntry(input.id, ctx.user.id);
         if (!entry) {
           throw new Error("SIS-Eintrag nicht gefunden");
+        }
+
+        // Get API key - prefer user-provided, then user-saved, then system env
+        let apiKey = input.apiKey;
+        if (!apiKey) {
+          apiKey = await getSetting(ctx.user.id, "openai_api_key") || undefined;
+        }
+        if (!apiKey) {
+          apiKey = process.env.OPENAI_API_KEY;
+        }
+        if (!apiKey) {
+          throw new Error("Kein OpenAI API-Key verfügbar. Bitte hinterlegen Sie einen API-Key in den Einstellungen.");
         }
 
         // Build prompt from SIS data
@@ -144,7 +156,7 @@ export const appRouter = router({
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            "Authorization": `Bearer ${input.apiKey}`,
+            "Authorization": `Bearer ${apiKey}`,
           },
           body: JSON.stringify({
             model: "gpt-4o",

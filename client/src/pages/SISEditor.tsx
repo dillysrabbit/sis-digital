@@ -73,18 +73,14 @@ export default function SISEditor() {
   };
 
   const handleGeneratePlan = async () => {
-    if (!apiKey) {
-      toast.error("Bitte hinterlegen Sie zuerst Ihren OpenAI API-Key in den Einstellungen");
-      return;
-    }
-
     const id = currentEntryId || entryId;
     if (!id) {
       toast.error("Bitte speichern Sie den Eintrag zuerst");
       return;
     }
 
-    await generatePlan.mutateAsync({ id, apiKey });
+    // API key is optional - server will use system key if available
+    await generatePlan.mutateAsync({ id, apiKey: apiKey || undefined });
   };
 
   if (isLoadingEntry && entryId) {
