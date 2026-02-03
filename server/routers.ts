@@ -7,6 +7,17 @@ import { createSisEntry, updateSisEntry, getSisEntry, listSisEntries, deleteSisE
 import { TRPCError } from "@trpc/server";
 
 // Default System Prompt für die Maßnahmenplan-Generierung
+// Verfügbare OpenAI Modelle
+const AVAILABLE_MODELS = [
+  { id: "gpt-4o", name: "GPT-4o", description: "Neuestes und leistungsstärkstes Modell" },
+  { id: "gpt-4-turbo", name: "GPT-4 Turbo", description: "Schneller und kosteneffizienter" },
+  { id: "gpt-4", name: "GPT-4", description: "Klassisches GPT-4 Modell" },
+  { id: "gpt-3.5-turbo", name: "GPT-3.5 Turbo", description: "Schnell und kostengünstig" },
+] as const;
+
+const DEFAULT_MODEL = "gpt-4o";
+
+// Default System Prompt für die Maßnahmenplan-Generierung
 const DEFAULT_SYSTEM_PROMPT = `Du bist ein erfahrener Pflegeexperte und erstellst individuelle Maßnahmenpläne basierend auf der Strukturierten Informationssammlung (SIS). 
                 
 Erstelle einen detaillierten, praxisnahen Maßnahmenplan, der:
@@ -17,6 +28,76 @@ Erstelle einen detaillierten, praxisnahen Maßnahmenplan, der:
 - Professionell und verständlich formuliert ist
 
 Strukturiere den Maßnahmenplan nach Themenfeldern und priorisiere nach Dringlichkeit.`;
+
+// Vordefinierte Prompt-Vorlagen
+const PROMPT_TEMPLATES = [
+  {
+    id: "standard",
+    name: "Standard (Ausführlich)",
+    description: "Detaillierter Maßnahmenplan mit allen Themenfeldern",
+    prompt: DEFAULT_SYSTEM_PROMPT,
+  },
+  {
+    id: "kompakt",
+    name: "Kompakt",
+    description: "Kürzerer, übersichtlicher Maßnahmenplan",
+    prompt: `Du bist ein erfahrener Pflegeexperte. Erstelle einen kompakten, übersichtlichen Maßnahmenplan basierend auf der SIS.
+
+Der Plan soll:
+- Maximal 1-2 Seiten umfassen
+- Die wichtigsten Maßnahmen pro Themenfeld in Stichpunkten auflisten
+- Prioritäten klar kennzeichnen (hoch/mittel/niedrig)
+- Sofort umsetzbar und praxisnah sein
+
+Verzichte auf ausführliche Erklärungen und fokussiere dich auf konkrete Handlungsanweisungen.`,
+  },
+  {
+    id: "risikofokussiert",
+    name: "Risikofokussiert",
+    description: "Schwerpunkt auf identifizierte Risiken und Prävention",
+    prompt: `Du bist ein erfahrener Pflegeexperte mit Spezialisierung auf Risikoprävention. Erstelle einen Maßnahmenplan mit besonderem Fokus auf die identifizierten Risiken.
+
+Der Plan soll:
+- Jeden identifizierten Risikobereich (Dekubitus, Sturz, Inkontinenz, Schmerz, Ernährung) einzeln adressieren
+- Konkrete präventive Maßnahmen für jedes Risiko benennen
+- Frühwarnzeichen und Eskalationskriterien definieren
+- Regelmäßige Überprüfungsintervalle vorschlagen
+- Die Ressourcen der pflegebedürftigen Person in die Prävention einbeziehen
+
+Strukturiere den Plan nach Risikobereichen, nicht nach Themenfeldern.`,
+  },
+  {
+    id: "ressourcenorientiert",
+    name: "Ressourcenorientiert",
+    description: "Fokus auf Fähigkeiten und Selbstständigkeit",
+    prompt: `Du bist ein erfahrener Pflegeexperte mit ressourcenorientiertem Ansatz. Erstelle einen Maßnahmenplan, der die vorhandenen Fähigkeiten und Ressourcen der pflegebedürftigen Person in den Mittelpunkt stellt.
+
+Der Plan soll:
+- Vorhandene Fähigkeiten und Stärken hervorheben
+- Maßnahmen zur Förderung der Selbstständigkeit priorisieren
+- Aktivierende Pflege in den Vordergrund stellen
+- Die Wünsche und Ziele der Person (O-Ton) berücksichtigen
+- Unterstützung nur dort vorsehen, wo sie wirklich nötig ist
+
+Formuliere positiv und stärkenorientiert.`,
+  },
+  {
+    id: "angehoerige",
+    name: "Für Angehörige",
+    description: "Verständlich formuliert für Angehörige und Betreuer",
+    prompt: `Du bist ein erfahrener Pflegeexperte. Erstelle einen Maßnahmenplan, der auch für Angehörige und pflegende Laien verständlich ist.
+
+Der Plan soll:
+- Fachbegriffe vermeiden oder erklären
+- Praktische Tipps für den Alltag geben
+- Klare, einfache Handlungsanweisungen enthalten
+- Auf typische Fragen von Angehörigen eingehen
+- Entlastungsmöglichkeiten für pflegende Angehörige aufzeigen
+- Warnzeichen benennen, bei denen professionelle Hilfe geholt werden sollte
+
+Schreibe in einer warmen, unterstützenden Sprache.`,
+  },
+] as const;
 
 // Risikomatrix Schema
 const riskMatrixSchema = z.object({
@@ -166,6 +247,9 @@ export const appRouter = router({
         
         // Get custom system prompt or use default
         const systemPrompt = await getGlobalSetting("system_prompt") || DEFAULT_SYSTEM_PROMPT;
+        
+        // Get selected model or use default
+        const selectedModel = await getGlobalSetting("openai_model") || DEFAULT_MODEL;
 
         // Call OpenAI API
         const response = await fetch("https://api.openai.com/v1/chat/completions", {
@@ -175,7 +259,7 @@ export const appRouter = router({
             "Authorization": `Bearer ${apiKey}`,
           },
           body: JSON.stringify({
-            model: "gpt-4o",
+            model: selectedModel,
             messages: [
               {
                 role: "system",
@@ -268,6 +352,64 @@ export const appRouter = router({
         }
         await setGlobalSetting("system_prompt", DEFAULT_SYSTEM_PROMPT);
         return { success: true, prompt: DEFAULT_SYSTEM_PROMPT };
+      }),
+
+    // Get available models
+    getModels: protectedProcedure
+      .query(({ ctx }) => {
+        if (ctx.user.role !== "admin") {
+          throw new TRPCError({ code: "FORBIDDEN", message: "Nur Administratoren haben Zugriff" });
+        }
+        return AVAILABLE_MODELS;
+      }),
+
+    // Get selected model
+    getSelectedModel: protectedProcedure
+      .query(async ({ ctx }) => {
+        if (ctx.user.role !== "admin") {
+          throw new TRPCError({ code: "FORBIDDEN", message: "Nur Administratoren haben Zugriff" });
+        }
+        const model = await getGlobalSetting("openai_model");
+        return model || DEFAULT_MODEL;
+      }),
+
+    // Set selected model
+    setModel: protectedProcedure
+      .input(z.object({ model: z.string() }))
+      .mutation(async ({ ctx, input }) => {
+        if (ctx.user.role !== "admin") {
+          throw new TRPCError({ code: "FORBIDDEN", message: "Nur Administratoren haben Zugriff" });
+        }
+        const validModels = AVAILABLE_MODELS.map(m => m.id);
+        if (!validModels.includes(input.model as any)) {
+          throw new TRPCError({ code: "BAD_REQUEST", message: "Ungültiges Modell" });
+        }
+        await setGlobalSetting("openai_model", input.model);
+        return { success: true };
+      }),
+
+    // Get prompt templates
+    getPromptTemplates: protectedProcedure
+      .query(({ ctx }) => {
+        if (ctx.user.role !== "admin") {
+          throw new TRPCError({ code: "FORBIDDEN", message: "Nur Administratoren haben Zugriff" });
+        }
+        return PROMPT_TEMPLATES;
+      }),
+
+    // Apply a prompt template
+    applyTemplate: protectedProcedure
+      .input(z.object({ templateId: z.string() }))
+      .mutation(async ({ ctx, input }) => {
+        if (ctx.user.role !== "admin") {
+          throw new TRPCError({ code: "FORBIDDEN", message: "Nur Administratoren haben Zugriff" });
+        }
+        const template = PROMPT_TEMPLATES.find(t => t.id === input.templateId);
+        if (!template) {
+          throw new TRPCError({ code: "BAD_REQUEST", message: "Vorlage nicht gefunden" });
+        }
+        await setGlobalSetting("system_prompt", template.prompt);
+        return { success: true, prompt: template.prompt };
       }),
   }),
 });

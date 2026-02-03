@@ -33,3 +33,10 @@
 - [x] Systemprompt in Datenbank speichern
 - [x] Zugriffsschutz nur für Eigentümer (Admin-Rolle)
 - [x] Navigation zum Admin-Bereich (nur für Admin sichtbar)
+
+## Admin-Erweiterungen
+- [x] Modell-Auswahl (GPT-4o, GPT-4, GPT-3.5-turbo) im Admin-Bereich
+- [x] Modell-Einstellung in Datenbank speichern
+- [x] Prompt-Vorlagen System implementieren
+- [x] Vordefinierte Vorlagen (ausführlich, kompakt, risikofokussiert, ressourcenorientiert, für Angehörige)
+- [x] Vorlagen-Auswahl im Admin-Bereich

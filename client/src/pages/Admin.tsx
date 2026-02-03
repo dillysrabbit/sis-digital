@@ -2,23 +2,36 @@ import { useAuth } from "@/_core/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { trpc } from "@/lib/trpc";
-import { ArrowLeft, Loader2, RotateCcw, Save, Shield, AlertTriangle } from "lucide-react";
+import { ArrowLeft, Loader2, RotateCcw, Save, Shield, AlertTriangle, Cpu, FileText, Check } from "lucide-react";
 import { useEffect, useState } from "react";
-import { Link, useLocation } from "wouter";
+import { Link } from "wouter";
 import { toast } from "sonner";
 
 export default function Admin() {
   const { user, loading: authLoading } = useAuth();
-  const [, setLocation] = useLocation();
   const [prompt, setPrompt] = useState("");
   const [hasChanges, setHasChanges] = useState(false);
+  const [selectedModel, setSelectedModel] = useState("");
 
   const { data: isAdmin, isLoading: isAdminLoading } = trpc.admin.isAdmin.useQuery(undefined, {
     enabled: !!user,
   });
 
   const { data: systemPrompt, isLoading: isPromptLoading } = trpc.admin.getSystemPrompt.useQuery(undefined, {
+    enabled: isAdmin === true,
+  });
+
+  const { data: models } = trpc.admin.getModels.useQuery(undefined, {
+    enabled: isAdmin === true,
+  });
+
+  const { data: currentModel } = trpc.admin.getSelectedModel.useQuery(undefined, {
+    enabled: isAdmin === true,
+  });
+
+  const { data: templates } = trpc.admin.getPromptTemplates.useQuery(undefined, {
     enabled: isAdmin === true,
   });
 
@@ -43,11 +56,37 @@ export default function Admin() {
     },
   });
 
+  const setModelMutation = trpc.admin.setModel.useMutation({
+    onSuccess: () => {
+      toast.success("Modell erfolgreich geändert");
+    },
+    onError: (error) => {
+      toast.error(`Fehler beim Ändern des Modells: ${error.message}`);
+    },
+  });
+
+  const applyTemplate = trpc.admin.applyTemplate.useMutation({
+    onSuccess: (data) => {
+      setPrompt(data.prompt);
+      setHasChanges(false);
+      toast.success("Vorlage erfolgreich angewendet");
+    },
+    onError: (error) => {
+      toast.error(`Fehler beim Anwenden der Vorlage: ${error.message}`);
+    },
+  });
+
   useEffect(() => {
     if (systemPrompt) {
       setPrompt(systemPrompt);
     }
   }, [systemPrompt]);
+
+  useEffect(() => {
+    if (currentModel) {
+      setSelectedModel(currentModel);
+    }
+  }, [currentModel]);
 
   // Loading state
   if (authLoading || isAdminLoading) {
@@ -124,6 +163,20 @@ export default function Admin() {
     }
   };
 
+  const handleModelChange = (model: string) => {
+    setSelectedModel(model);
+    setModelMutation.mutate({ model });
+  };
+
+  const handleApplyTemplate = (templateId: string) => {
+    if (hasChanges) {
+      if (!confirm("Sie haben ungespeicherte Änderungen. Möchten Sie die Vorlage trotzdem anwenden?")) {
+        return;
+      }
+    }
+    applyTemplate.mutate({ templateId });
+  };
+
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
@@ -153,7 +206,95 @@ export default function Admin() {
 
       {/* Main Content */}
       <main className="container py-8">
-        <div className="max-w-4xl mx-auto">
+        <div className="max-w-4xl mx-auto space-y-6">
+          
+          {/* Model Selection */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Cpu className="h-5 w-5 text-purple-600" />
+                KI-Modell auswählen
+              </CardTitle>
+              <CardDescription>
+                Wählen Sie das OpenAI-Modell für die Maßnahmenplan-Generierung.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                <Select value={selectedModel} onValueChange={handleModelChange}>
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Modell auswählen..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {models?.map((model) => (
+                      <SelectItem key={model.id} value={model.id}>
+                        <div className="flex flex-col">
+                          <span className="font-medium">{model.name}</span>
+                          <span className="text-xs text-gray-500">{model.description}</span>
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                
+                {models && (
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                    {models.map((model) => (
+                      <div
+                        key={model.id}
+                        className={`p-3 rounded-lg border cursor-pointer transition-all ${
+                          selectedModel === model.id
+                            ? "border-purple-500 bg-purple-50"
+                            : "border-gray-200 hover:border-gray-300"
+                        }`}
+                        onClick={() => handleModelChange(model.id)}
+                      >
+                        <div className="flex items-center justify-between mb-1">
+                          <span className="font-medium text-sm">{model.name}</span>
+                          {selectedModel === model.id && (
+                            <Check className="h-4 w-4 text-purple-600" />
+                          )}
+                        </div>
+                        <p className="text-xs text-gray-500">{model.description}</p>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Prompt Templates */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <FileText className="h-5 w-5 text-green-600" />
+                Prompt-Vorlagen
+              </CardTitle>
+              <CardDescription>
+                Wählen Sie eine vordefinierte Vorlage als Ausgangspunkt für Ihren Systemprompt.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                {templates?.map((template) => (
+                  <div
+                    key={template.id}
+                    className="p-4 rounded-lg border border-gray-200 hover:border-green-300 hover:bg-green-50 cursor-pointer transition-all"
+                    onClick={() => handleApplyTemplate(template.id)}
+                  >
+                    <h4 className="font-medium text-sm mb-1">{template.name}</h4>
+                    <p className="text-xs text-gray-500">{template.description}</p>
+                  </div>
+                ))}
+              </div>
+              <p className="text-xs text-gray-500 mt-3">
+                Klicken Sie auf eine Vorlage, um sie als Systemprompt zu übernehmen.
+              </p>
+            </CardContent>
+          </Card>
+
+          {/* System Prompt Editor */}
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
@@ -229,7 +370,7 @@ export default function Admin() {
           </Card>
 
           {/* Info Box */}
-          <Card className="mt-6 bg-blue-50 border-blue-200">
+          <Card className="bg-blue-50 border-blue-200">
             <CardContent className="pt-6">
               <h3 className="font-semibold text-blue-900 mb-2">💡 Tipps für einen guten Systemprompt</h3>
               <ul className="text-sm text-blue-800 space-y-1 list-disc list-inside">
