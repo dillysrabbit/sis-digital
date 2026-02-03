@@ -40,3 +40,13 @@
 - [x] Prompt-Vorlagen System implementieren
 - [x] Vordefinierte Vorlagen (ausführlich, kompakt, risikofokussiert, ressourcenorientiert, für Angehörige)
 - [x] Vorlagen-Auswahl im Admin-Bereich
+
+## SIS-Prüfung Funktion
+- [x] Backend: Separate Einstellungen für SIS-Prüfung (Systemprompt, Modell)
+- [x] Backend: API-Endpunkt für SIS-Prüfung
+- [x] Admin: Separater Bereich für SIS-Prüfung Einstellungen
+- [x] Admin: Eigene Prompt-Vorlagen für Prüfung
+- [x] Admin: Eigene Modell-Auswahl für Prüfung
+- [x] Frontend: "SIS prüfen" Button im SIS-Editor
+- [x] Frontend: Anzeige des Prüfungsergebnisses
+- [x] Tests für SIS-Prüfung Funktionen

@@ -5,8 +5,9 @@ import { SISForm, SISFormData } from "@/components/SISForm";
 import { MassnahmenplanDisplay } from "@/components/MassnahmenplanDisplay";
 import { ApiKeySettings } from "@/components/ApiKeySettings";
 import { Button } from "@/components/ui/button";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
-import { ArrowLeft, Loader2 } from "lucide-react";
+import { ArrowLeft, Loader2, FileCheck, ClipboardCheck } from "lucide-react";
 
 export default function SISEditor() {
   const params = useParams<{ id?: string }>();
@@ -16,6 +17,8 @@ export default function SISEditor() {
 
   const [currentEntryId, setCurrentEntryId] = useState<number | null>(entryId);
   const [massnahmenplan, setMassnahmenplan] = useState<string>("");
+  const [pruefungsergebnis, setPruefungsergebnis] = useState<string>("");
+  const [activeTab, setActiveTab] = useState<string>("massnahmenplan");
 
   // Fetch existing entry if editing
   const { data: existingEntry, isLoading: isLoadingEntry } = trpc.sis.get.useQuery(
@@ -50,6 +53,7 @@ export default function SISEditor() {
   const generatePlan = trpc.sis.generatePlan.useMutation({
     onSuccess: (data) => {
       setMassnahmenplan(data.plan);
+      setActiveTab("massnahmenplan");
       toast.success("Maßnahmenplan erfolgreich generiert");
     },
     onError: (error) => {
@@ -57,10 +61,24 @@ export default function SISEditor() {
     },
   });
 
-  // Update massnahmenplan when entry is loaded
+  const checkSis = trpc.sis.checkSis.useMutation({
+    onSuccess: (data) => {
+      setPruefungsergebnis(data.result);
+      setActiveTab("pruefung");
+      toast.success("SIS-Prüfung erfolgreich abgeschlossen");
+    },
+    onError: (error) => {
+      toast.error(`Fehler bei der Prüfung: ${error.message}`);
+    },
+  });
+
+  // Update massnahmenplan and pruefungsergebnis when entry is loaded
   useEffect(() => {
     if (existingEntry?.massnahmenplan) {
       setMassnahmenplan(existingEntry.massnahmenplan);
+    }
+    if (existingEntry?.pruefungsergebnis) {
+      setPruefungsergebnis(existingEntry.pruefungsergebnis);
     }
   }, [existingEntry]);
 
@@ -81,6 +99,17 @@ export default function SISEditor() {
 
     // API key is optional - server will use system key if available
     await generatePlan.mutateAsync({ id, apiKey: apiKey || undefined });
+  };
+
+  const handleCheckSis = async () => {
+    const id = currentEntryId || entryId;
+    if (!id) {
+      toast.error("Bitte speichern Sie den Eintrag zuerst");
+      return;
+    }
+
+    // API key is optional - server will use system key if available
+    await checkSis.mutateAsync({ id, apiKey: apiKey || undefined });
   };
 
   if (isLoadingEntry && entryId) {
@@ -138,18 +167,45 @@ export default function SISEditor() {
               initialData={initialData}
               onSave={handleSave}
               onGeneratePlan={handleGeneratePlan}
+              onCheckSis={handleCheckSis}
               isSaving={createEntry.isPending || updateEntry.isPending}
               isGenerating={generatePlan.isPending}
+              isChecking={checkSis.isPending}
             />
           </div>
 
-          {/* Maßnahmenplan */}
+          {/* Results Panel */}
           <div className="xl:col-span-1">
             <div className="sticky top-24">
-              <MassnahmenplanDisplay
-                plan={massnahmenplan}
-                patientName={existingEntry?.patientName || "Patient"}
-              />
+              <Tabs value={activeTab} onValueChange={setActiveTab}>
+                <TabsList className="grid w-full grid-cols-2 mb-4">
+                  <TabsTrigger value="massnahmenplan" className="flex items-center gap-2">
+                    <FileCheck className="h-4 w-4" />
+                    Maßnahmenplan
+                  </TabsTrigger>
+                  <TabsTrigger value="pruefung" className="flex items-center gap-2">
+                    <ClipboardCheck className="h-4 w-4" />
+                    Prüfung
+                  </TabsTrigger>
+                </TabsList>
+
+                <TabsContent value="massnahmenplan">
+                  <MassnahmenplanDisplay
+                    plan={massnahmenplan}
+                    patientName={existingEntry?.patientName || "Patient"}
+                  />
+                </TabsContent>
+
+                <TabsContent value="pruefung">
+                  <MassnahmenplanDisplay
+                    plan={pruefungsergebnis}
+                    patientName={existingEntry?.patientName || "Patient"}
+                    title="SIS-Prüfungsergebnis"
+                    emptyMessage="Noch keine Prüfung durchgeführt. Klicken Sie auf 'SIS prüfen', um eine Qualitätsprüfung der SIS durchzuführen."
+                    icon="🔍"
+                  />
+                </TabsContent>
+              </Tabs>
             </div>
           </div>
         </div>

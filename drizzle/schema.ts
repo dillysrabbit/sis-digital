@@ -50,6 +50,9 @@ export const sisEntries = mysqlTable("sis_entries", {
   // Generierter Maßnahmenplan
   massnahmenplan: text("massnahmenplan"),
   
+  // Prüfungsergebnis
+  pruefungsergebnis: text("pruefungsergebnis"),
+  
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 });

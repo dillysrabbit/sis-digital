@@ -2,24 +2,32 @@ import { useAuth } from "@/_core/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { trpc } from "@/lib/trpc";
-import { ArrowLeft, Loader2, RotateCcw, Save, Shield, AlertTriangle, Cpu, FileText, Check } from "lucide-react";
+import { ArrowLeft, Loader2, RotateCcw, Save, Shield, AlertTriangle, Cpu, FileText, Check, ClipboardCheck, FileCheck } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Link } from "wouter";
 import { toast } from "sonner";
 
 export default function Admin() {
   const { user, loading: authLoading } = useAuth();
-  const [prompt, setPrompt] = useState("");
-  const [hasChanges, setHasChanges] = useState(false);
-  const [selectedModel, setSelectedModel] = useState("");
+  
+  // Maßnahmenplan states
+  const [planPrompt, setPlanPrompt] = useState("");
+  const [planHasChanges, setPlanHasChanges] = useState(false);
+  const [planSelectedModel, setPlanSelectedModel] = useState("");
+  
+  // SIS-Prüfung states
+  const [checkPrompt, setCheckPrompt] = useState("");
+  const [checkHasChanges, setCheckHasChanges] = useState(false);
+  const [checkSelectedModel, setCheckSelectedModel] = useState("");
 
   const { data: isAdmin, isLoading: isAdminLoading } = trpc.admin.isAdmin.useQuery(undefined, {
     enabled: !!user,
   });
 
-  const { data: systemPrompt, isLoading: isPromptLoading } = trpc.admin.getSystemPrompt.useQuery(undefined, {
+  // Maßnahmenplan queries
+  const { data: planSystemPrompt, isLoading: isPlanPromptLoading } = trpc.admin.getSystemPrompt.useQuery(undefined, {
     enabled: isAdmin === true,
   });
 
@@ -27,48 +35,62 @@ export default function Admin() {
     enabled: isAdmin === true,
   });
 
-  const { data: currentModel } = trpc.admin.getSelectedModel.useQuery(undefined, {
+  const { data: planCurrentModel } = trpc.admin.getSelectedModel.useQuery(undefined, {
     enabled: isAdmin === true,
   });
 
-  const { data: templates } = trpc.admin.getPromptTemplates.useQuery(undefined, {
+  const { data: planTemplates } = trpc.admin.getPromptTemplates.useQuery(undefined, {
     enabled: isAdmin === true,
   });
 
-  const savePrompt = trpc.admin.setSystemPrompt.useMutation({
+  // SIS-Prüfung queries
+  const { data: checkSystemPrompt, isLoading: isCheckPromptLoading } = trpc.admin.getCheckSystemPrompt.useQuery(undefined, {
+    enabled: isAdmin === true,
+  });
+
+  const { data: checkCurrentModel } = trpc.admin.getCheckSelectedModel.useQuery(undefined, {
+    enabled: isAdmin === true,
+  });
+
+  const { data: checkTemplates } = trpc.admin.getCheckPromptTemplates.useQuery(undefined, {
+    enabled: isAdmin === true,
+  });
+
+  // Maßnahmenplan mutations
+  const savePlanPrompt = trpc.admin.setSystemPrompt.useMutation({
     onSuccess: () => {
-      toast.success("Systemprompt erfolgreich gespeichert");
-      setHasChanges(false);
+      toast.success("Maßnahmenplan-Prompt erfolgreich gespeichert");
+      setPlanHasChanges(false);
     },
     onError: (error) => {
       toast.error(`Fehler beim Speichern: ${error.message}`);
     },
   });
 
-  const resetPrompt = trpc.admin.resetSystemPrompt.useMutation({
+  const resetPlanPrompt = trpc.admin.resetSystemPrompt.useMutation({
     onSuccess: (data) => {
-      setPrompt(data.prompt);
-      setHasChanges(false);
-      toast.success("Systemprompt auf Standard zurückgesetzt");
+      setPlanPrompt(data.prompt);
+      setPlanHasChanges(false);
+      toast.success("Maßnahmenplan-Prompt auf Standard zurückgesetzt");
     },
     onError: (error) => {
       toast.error(`Fehler beim Zurücksetzen: ${error.message}`);
     },
   });
 
-  const setModelMutation = trpc.admin.setModel.useMutation({
+  const setPlanModelMutation = trpc.admin.setModel.useMutation({
     onSuccess: () => {
-      toast.success("Modell erfolgreich geändert");
+      toast.success("Maßnahmenplan-Modell erfolgreich geändert");
     },
     onError: (error) => {
       toast.error(`Fehler beim Ändern des Modells: ${error.message}`);
     },
   });
 
-  const applyTemplate = trpc.admin.applyTemplate.useMutation({
+  const applyPlanTemplate = trpc.admin.applyTemplate.useMutation({
     onSuccess: (data) => {
-      setPrompt(data.prompt);
-      setHasChanges(false);
+      setPlanPrompt(data.prompt);
+      setPlanHasChanges(false);
       toast.success("Vorlage erfolgreich angewendet");
     },
     onError: (error) => {
@@ -76,17 +98,73 @@ export default function Admin() {
     },
   });
 
+  // SIS-Prüfung mutations
+  const saveCheckPrompt = trpc.admin.setCheckSystemPrompt.useMutation({
+    onSuccess: () => {
+      toast.success("Prüfungs-Prompt erfolgreich gespeichert");
+      setCheckHasChanges(false);
+    },
+    onError: (error) => {
+      toast.error(`Fehler beim Speichern: ${error.message}`);
+    },
+  });
+
+  const resetCheckPrompt = trpc.admin.resetCheckSystemPrompt.useMutation({
+    onSuccess: (data) => {
+      setCheckPrompt(data.prompt);
+      setCheckHasChanges(false);
+      toast.success("Prüfungs-Prompt auf Standard zurückgesetzt");
+    },
+    onError: (error) => {
+      toast.error(`Fehler beim Zurücksetzen: ${error.message}`);
+    },
+  });
+
+  const setCheckModelMutation = trpc.admin.setCheckModel.useMutation({
+    onSuccess: () => {
+      toast.success("Prüfungs-Modell erfolgreich geändert");
+    },
+    onError: (error) => {
+      toast.error(`Fehler beim Ändern des Modells: ${error.message}`);
+    },
+  });
+
+  const applyCheckTemplate = trpc.admin.applyCheckTemplate.useMutation({
+    onSuccess: (data) => {
+      setCheckPrompt(data.prompt);
+      setCheckHasChanges(false);
+      toast.success("Vorlage erfolgreich angewendet");
+    },
+    onError: (error) => {
+      toast.error(`Fehler beim Anwenden der Vorlage: ${error.message}`);
+    },
+  });
+
+  // Effects for Maßnahmenplan
   useEffect(() => {
-    if (systemPrompt) {
-      setPrompt(systemPrompt);
+    if (planSystemPrompt) {
+      setPlanPrompt(planSystemPrompt);
     }
-  }, [systemPrompt]);
+  }, [planSystemPrompt]);
 
   useEffect(() => {
-    if (currentModel) {
-      setSelectedModel(currentModel);
+    if (planCurrentModel) {
+      setPlanSelectedModel(planCurrentModel);
     }
-  }, [currentModel]);
+  }, [planCurrentModel]);
+
+  // Effects for SIS-Prüfung
+  useEffect(() => {
+    if (checkSystemPrompt) {
+      setCheckPrompt(checkSystemPrompt);
+    }
+  }, [checkSystemPrompt]);
+
+  useEffect(() => {
+    if (checkCurrentModel) {
+      setCheckSelectedModel(checkCurrentModel);
+    }
+  }, [checkCurrentModel]);
 
   // Loading state
   if (authLoading || isAdminLoading) {
@@ -148,33 +226,64 @@ export default function Admin() {
     );
   }
 
-  const handlePromptChange = (value: string) => {
-    setPrompt(value);
-    setHasChanges(value !== systemPrompt);
+  // Maßnahmenplan handlers
+  const handlePlanPromptChange = (value: string) => {
+    setPlanPrompt(value);
+    setPlanHasChanges(value !== planSystemPrompt);
   };
 
-  const handleSave = () => {
-    savePrompt.mutate({ prompt });
+  const handlePlanSave = () => {
+    savePlanPrompt.mutate({ prompt: planPrompt });
   };
 
-  const handleReset = () => {
-    if (confirm("Möchten Sie den Systemprompt wirklich auf den Standard zurücksetzen?")) {
-      resetPrompt.mutate();
+  const handlePlanReset = () => {
+    if (confirm("Möchten Sie den Maßnahmenplan-Prompt wirklich auf den Standard zurücksetzen?")) {
+      resetPlanPrompt.mutate();
     }
   };
 
-  const handleModelChange = (model: string) => {
-    setSelectedModel(model);
-    setModelMutation.mutate({ model });
+  const handlePlanModelChange = (model: string) => {
+    setPlanSelectedModel(model);
+    setPlanModelMutation.mutate({ model });
   };
 
-  const handleApplyTemplate = (templateId: string) => {
-    if (hasChanges) {
+  const handleApplyPlanTemplate = (templateId: string) => {
+    if (planHasChanges) {
       if (!confirm("Sie haben ungespeicherte Änderungen. Möchten Sie die Vorlage trotzdem anwenden?")) {
         return;
       }
     }
-    applyTemplate.mutate({ templateId });
+    applyPlanTemplate.mutate({ templateId });
+  };
+
+  // SIS-Prüfung handlers
+  const handleCheckPromptChange = (value: string) => {
+    setCheckPrompt(value);
+    setCheckHasChanges(value !== checkSystemPrompt);
+  };
+
+  const handleCheckSave = () => {
+    saveCheckPrompt.mutate({ prompt: checkPrompt });
+  };
+
+  const handleCheckReset = () => {
+    if (confirm("Möchten Sie den Prüfungs-Prompt wirklich auf den Standard zurücksetzen?")) {
+      resetCheckPrompt.mutate();
+    }
+  };
+
+  const handleCheckModelChange = (model: string) => {
+    setCheckSelectedModel(model);
+    setCheckModelMutation.mutate({ model });
+  };
+
+  const handleApplyCheckTemplate = (templateId: string) => {
+    if (checkHasChanges) {
+      if (!confirm("Sie haben ungespeicherte Änderungen. Möchten Sie die Vorlage trotzdem anwenden?")) {
+        return;
+      }
+    }
+    applyCheckTemplate.mutate({ templateId });
   };
 
   return (
@@ -206,182 +315,296 @@ export default function Admin() {
 
       {/* Main Content */}
       <main className="container py-8">
-        <div className="max-w-4xl mx-auto space-y-6">
-          
-          {/* Model Selection */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Cpu className="h-5 w-5 text-purple-600" />
-                KI-Modell auswählen
-              </CardTitle>
-              <CardDescription>
-                Wählen Sie das OpenAI-Modell für die Maßnahmenplan-Generierung.
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                <Select value={selectedModel} onValueChange={handleModelChange}>
-                  <SelectTrigger className="w-full">
-                    <SelectValue placeholder="Modell auswählen..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {models?.map((model) => (
-                      <SelectItem key={model.id} value={model.id}>
-                        <div className="flex flex-col">
-                          <span className="font-medium">{model.name}</span>
-                          <span className="text-xs text-gray-500">{model.description}</span>
+        <div className="max-w-4xl mx-auto">
+          <Tabs defaultValue="massnahmenplan" className="space-y-6">
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="massnahmenplan" className="flex items-center gap-2">
+                <FileCheck className="h-4 w-4" />
+                Maßnahmenplan
+              </TabsTrigger>
+              <TabsTrigger value="pruefung" className="flex items-center gap-2">
+                <ClipboardCheck className="h-4 w-4" />
+                SIS-Prüfung
+              </TabsTrigger>
+            </TabsList>
+
+            {/* Maßnahmenplan Tab */}
+            <TabsContent value="massnahmenplan" className="space-y-6">
+              {/* Model Selection */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Cpu className="h-5 w-5 text-purple-600" />
+                    KI-Modell für Maßnahmenplan
+                  </CardTitle>
+                  <CardDescription>
+                    Wählen Sie das OpenAI-Modell für die Maßnahmenplan-Generierung.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  {models && (
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                      {models.map((model) => (
+                        <div
+                          key={model.id}
+                          className={`p-3 rounded-lg border cursor-pointer transition-all ${
+                            planSelectedModel === model.id
+                              ? "border-purple-500 bg-purple-50"
+                              : "border-gray-200 hover:border-gray-300"
+                          }`}
+                          onClick={() => handlePlanModelChange(model.id)}
+                        >
+                          <div className="flex items-center justify-between mb-1">
+                            <span className="font-medium text-sm">{model.name}</span>
+                            {planSelectedModel === model.id && (
+                              <Check className="h-4 w-4 text-purple-600" />
+                            )}
+                          </div>
+                          <p className="text-xs text-gray-500">{model.description}</p>
                         </div>
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                
-                {models && (
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-                    {models.map((model) => (
+                      ))}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+
+              {/* Prompt Templates */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <FileText className="h-5 w-5 text-green-600" />
+                    Prompt-Vorlagen für Maßnahmenplan
+                  </CardTitle>
+                  <CardDescription>
+                    Wählen Sie eine vordefinierte Vorlage als Ausgangspunkt.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                    {planTemplates?.map((template) => (
                       <div
-                        key={model.id}
-                        className={`p-3 rounded-lg border cursor-pointer transition-all ${
-                          selectedModel === model.id
-                            ? "border-purple-500 bg-purple-50"
-                            : "border-gray-200 hover:border-gray-300"
-                        }`}
-                        onClick={() => handleModelChange(model.id)}
+                        key={template.id}
+                        className="p-4 rounded-lg border border-gray-200 hover:border-green-300 hover:bg-green-50 cursor-pointer transition-all"
+                        onClick={() => handleApplyPlanTemplate(template.id)}
                       >
-                        <div className="flex items-center justify-between mb-1">
-                          <span className="font-medium text-sm">{model.name}</span>
-                          {selectedModel === model.id && (
-                            <Check className="h-4 w-4 text-purple-600" />
-                          )}
-                        </div>
-                        <p className="text-xs text-gray-500">{model.description}</p>
+                        <h4 className="font-medium text-sm mb-1">{template.name}</h4>
+                        <p className="text-xs text-gray-500">{template.description}</p>
                       </div>
                     ))}
                   </div>
-                )}
-              </div>
-            </CardContent>
-          </Card>
+                </CardContent>
+              </Card>
 
-          {/* Prompt Templates */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <FileText className="h-5 w-5 text-green-600" />
-                Prompt-Vorlagen
-              </CardTitle>
-              <CardDescription>
-                Wählen Sie eine vordefinierte Vorlage als Ausgangspunkt für Ihren Systemprompt.
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                {templates?.map((template) => (
-                  <div
-                    key={template.id}
-                    className="p-4 rounded-lg border border-gray-200 hover:border-green-300 hover:bg-green-50 cursor-pointer transition-all"
-                    onClick={() => handleApplyTemplate(template.id)}
-                  >
-                    <h4 className="font-medium text-sm mb-1">{template.name}</h4>
-                    <p className="text-xs text-gray-500">{template.description}</p>
-                  </div>
-                ))}
-              </div>
-              <p className="text-xs text-gray-500 mt-3">
-                Klicken Sie auf eine Vorlage, um sie als Systemprompt zu übernehmen.
-              </p>
-            </CardContent>
-          </Card>
+              {/* System Prompt Editor */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <span className="text-2xl">📋</span>
+                    Maßnahmenplan-Systemprompt
+                  </CardTitle>
+                  <CardDescription>
+                    Dieser Prompt instruiert die KI bei der Generierung von Maßnahmenplänen.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  {isPlanPromptLoading ? (
+                    <div className="flex items-center justify-center py-12">
+                      <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
+                    </div>
+                  ) : (
+                    <>
+                      <Textarea
+                        value={planPrompt}
+                        onChange={(e) => handlePlanPromptChange(e.target.value)}
+                        placeholder="Geben Sie hier den Systemprompt ein..."
+                        className="min-h-[300px] font-mono text-sm"
+                      />
 
-          {/* System Prompt Editor */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <span className="text-2xl">🤖</span>
-                KI-Systemprompt bearbeiten
-              </CardTitle>
-              <CardDescription>
-                Hier können Sie den Systemprompt anpassen, der die KI bei der Generierung 
-                von Maßnahmenplänen instruiert. Änderungen wirken sich auf alle zukünftigen 
-                Generierungen aus.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              {isPromptLoading ? (
-                <div className="flex items-center justify-center py-12">
-                  <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
-                </div>
-              ) : (
-                <>
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium text-gray-700">
-                      Systemprompt
-                    </label>
-                    <Textarea
-                      value={prompt}
-                      onChange={(e) => handlePromptChange(e.target.value)}
-                      placeholder="Geben Sie hier den Systemprompt ein..."
-                      className="min-h-[400px] font-mono text-sm"
-                    />
-                    <p className="text-xs text-gray-500">
-                      Der Systemprompt definiert, wie die KI auf die SIS-Daten reagiert und 
-                      den Maßnahmenplan strukturiert.
-                    </p>
-                  </div>
+                      <div className="flex items-center justify-between pt-4 border-t">
+                        <Button
+                          variant="outline"
+                          onClick={handlePlanReset}
+                          disabled={resetPlanPrompt.isPending}
+                        >
+                          {resetPlanPrompt.isPending ? (
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          ) : (
+                            <RotateCcw className="mr-2 h-4 w-4" />
+                          )}
+                          Auf Standard zurücksetzen
+                        </Button>
 
-                  <div className="flex items-center justify-between pt-4 border-t">
-                    <Button
-                      variant="outline"
-                      onClick={handleReset}
-                      disabled={resetPrompt.isPending}
-                    >
-                      {resetPrompt.isPending ? (
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      ) : (
-                        <RotateCcw className="mr-2 h-4 w-4" />
+                        <Button
+                          onClick={handlePlanSave}
+                          disabled={!planHasChanges || savePlanPrompt.isPending}
+                        >
+                          {savePlanPrompt.isPending ? (
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          ) : (
+                            <Save className="mr-2 h-4 w-4" />
+                          )}
+                          Änderungen speichern
+                        </Button>
+                      </div>
+
+                      {planHasChanges && (
+                        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                          <p className="text-sm text-yellow-800">
+                            <strong>Hinweis:</strong> Sie haben ungespeicherte Änderungen.
+                          </p>
+                        </div>
                       )}
-                      Auf Standard zurücksetzen
-                    </Button>
+                    </>
+                  )}
+                </CardContent>
+              </Card>
+            </TabsContent>
 
-                    <Button
-                      onClick={handleSave}
-                      disabled={!hasChanges || savePrompt.isPending}
-                    >
-                      {savePrompt.isPending ? (
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      ) : (
-                        <Save className="mr-2 h-4 w-4" />
-                      )}
-                      Änderungen speichern
-                    </Button>
-                  </div>
-
-                  {hasChanges && (
-                    <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-                      <p className="text-sm text-yellow-800">
-                        <strong>Hinweis:</strong> Sie haben ungespeicherte Änderungen.
-                      </p>
+            {/* SIS-Prüfung Tab */}
+            <TabsContent value="pruefung" className="space-y-6">
+              {/* Model Selection */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Cpu className="h-5 w-5 text-orange-600" />
+                    KI-Modell für SIS-Prüfung
+                  </CardTitle>
+                  <CardDescription>
+                    Wählen Sie das OpenAI-Modell für die SIS-Prüfung.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  {models && (
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                      {models.map((model) => (
+                        <div
+                          key={model.id}
+                          className={`p-3 rounded-lg border cursor-pointer transition-all ${
+                            checkSelectedModel === model.id
+                              ? "border-orange-500 bg-orange-50"
+                              : "border-gray-200 hover:border-gray-300"
+                          }`}
+                          onClick={() => handleCheckModelChange(model.id)}
+                        >
+                          <div className="flex items-center justify-between mb-1">
+                            <span className="font-medium text-sm">{model.name}</span>
+                            {checkSelectedModel === model.id && (
+                              <Check className="h-4 w-4 text-orange-600" />
+                            )}
+                          </div>
+                          <p className="text-xs text-gray-500">{model.description}</p>
+                        </div>
+                      ))}
                     </div>
                   )}
-                </>
-              )}
-            </CardContent>
-          </Card>
+                </CardContent>
+              </Card>
 
-          {/* Info Box */}
-          <Card className="bg-blue-50 border-blue-200">
-            <CardContent className="pt-6">
-              <h3 className="font-semibold text-blue-900 mb-2">💡 Tipps für einen guten Systemprompt</h3>
-              <ul className="text-sm text-blue-800 space-y-1 list-disc list-inside">
-                <li>Definieren Sie klar die Rolle der KI (z.B. "erfahrener Pflegeexperte")</li>
-                <li>Geben Sie konkrete Anweisungen zur Struktur des Maßnahmenplans</li>
-                <li>Betonen Sie wichtige Aspekte wie Individualität und Praxisnähe</li>
-                <li>Weisen Sie auf die Berücksichtigung von Risiken und Ressourcen hin</li>
-                <li>Legen Sie den gewünschten Sprachstil fest (professionell, verständlich)</li>
-              </ul>
-            </CardContent>
-          </Card>
+              {/* Prompt Templates */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <FileText className="h-5 w-5 text-blue-600" />
+                    Prompt-Vorlagen für SIS-Prüfung
+                  </CardTitle>
+                  <CardDescription>
+                    Wählen Sie eine vordefinierte Vorlage als Ausgangspunkt.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                    {checkTemplates?.map((template) => (
+                      <div
+                        key={template.id}
+                        className="p-4 rounded-lg border border-gray-200 hover:border-blue-300 hover:bg-blue-50 cursor-pointer transition-all"
+                        onClick={() => handleApplyCheckTemplate(template.id)}
+                      >
+                        <h4 className="font-medium text-sm mb-1">{template.name}</h4>
+                        <p className="text-xs text-gray-500">{template.description}</p>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* System Prompt Editor */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <span className="text-2xl">🔍</span>
+                    SIS-Prüfungs-Systemprompt
+                  </CardTitle>
+                  <CardDescription>
+                    Dieser Prompt instruiert die KI bei der Prüfung der SIS.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  {isCheckPromptLoading ? (
+                    <div className="flex items-center justify-center py-12">
+                      <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
+                    </div>
+                  ) : (
+                    <>
+                      <Textarea
+                        value={checkPrompt}
+                        onChange={(e) => handleCheckPromptChange(e.target.value)}
+                        placeholder="Geben Sie hier den Systemprompt ein..."
+                        className="min-h-[300px] font-mono text-sm"
+                      />
+
+                      <div className="flex items-center justify-between pt-4 border-t">
+                        <Button
+                          variant="outline"
+                          onClick={handleCheckReset}
+                          disabled={resetCheckPrompt.isPending}
+                        >
+                          {resetCheckPrompt.isPending ? (
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          ) : (
+                            <RotateCcw className="mr-2 h-4 w-4" />
+                          )}
+                          Auf Standard zurücksetzen
+                        </Button>
+
+                        <Button
+                          onClick={handleCheckSave}
+                          disabled={!checkHasChanges || saveCheckPrompt.isPending}
+                        >
+                          {saveCheckPrompt.isPending ? (
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          ) : (
+                            <Save className="mr-2 h-4 w-4" />
+                          )}
+                          Änderungen speichern
+                        </Button>
+                      </div>
+
+                      {checkHasChanges && (
+                        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                          <p className="text-sm text-yellow-800">
+                            <strong>Hinweis:</strong> Sie haben ungespeicherte Änderungen.
+                          </p>
+                        </div>
+                      )}
+                    </>
+                  )}
+                </CardContent>
+              </Card>
+
+              {/* Info Box */}
+              <Card className="bg-orange-50 border-orange-200">
+                <CardContent className="pt-6">
+                  <h3 className="font-semibold text-orange-900 mb-2">💡 Tipps für die SIS-Prüfung</h3>
+                  <ul className="text-sm text-orange-800 space-y-1 list-disc list-inside">
+                    <li>Definieren Sie klare Prüfkriterien (Vollständigkeit, Plausibilität, etc.)</li>
+                    <li>Geben Sie an, wie detailliert das Feedback sein soll</li>
+                    <li>Weisen Sie auf MDK-relevante Aspekte hin, falls gewünscht</li>
+                    <li>Legen Sie fest, ob konstruktive Verbesserungsvorschläge gegeben werden sollen</li>
+                  </ul>
+                </CardContent>
+              </Card>
+            </TabsContent>
+          </Tabs>
         </div>
       </main>
     </div>

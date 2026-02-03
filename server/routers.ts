@@ -6,7 +6,6 @@ import { z } from "zod";
 import { createSisEntry, updateSisEntry, getSisEntry, listSisEntries, deleteSisEntry, getSetting, setSetting, getGlobalSetting, setGlobalSetting } from "./db";
 import { TRPCError } from "@trpc/server";
 
-// Default System Prompt für die Maßnahmenplan-Generierung
 // Verfügbare OpenAI Modelle
 const AVAILABLE_MODELS = [
   { id: "gpt-4o", name: "GPT-4o", description: "Neuestes und leistungsstärkstes Modell" },
@@ -29,7 +28,24 @@ Erstelle einen detaillierten, praxisnahen Maßnahmenplan, der:
 
 Strukturiere den Maßnahmenplan nach Themenfeldern und priorisiere nach Dringlichkeit.`;
 
-// Vordefinierte Prompt-Vorlagen
+// Default System Prompt für die SIS-Prüfung
+const DEFAULT_CHECK_PROMPT = `Du bist ein erfahrener Pflegeexperte und Qualitätsbeauftragter. Deine Aufgabe ist es, die Strukturierte Informationssammlung (SIS) auf Vollständigkeit, Plausibilität und fachliche Qualität zu prüfen.
+
+Prüfe die SIS auf folgende Aspekte:
+
+1. **Vollständigkeit**: Sind alle relevanten Themenfelder ausgefüllt? Fehlen wichtige Informationen?
+
+2. **Plausibilität**: Passen die Angaben zueinander? Gibt es Widersprüche zwischen den Themenfeldern?
+
+3. **Risikomatrix**: Sind die identifizierten Risiken nachvollziehbar? Wurden Risiken möglicherweise übersehen?
+
+4. **O-Ton**: Ist die Perspektive der pflegebedürftigen Person ausreichend dokumentiert?
+
+5. **Fachliche Qualität**: Sind die Einschätzungen fachlich korrekt und nachvollziehbar formuliert?
+
+Gib konstruktives Feedback mit konkreten Verbesserungsvorschlägen. Strukturiere deine Rückmeldung nach den Prüfaspekten.`;
+
+// Vordefinierte Prompt-Vorlagen für Maßnahmenplan
 const PROMPT_TEMPLATES = [
   {
     id: "standard",
@@ -99,6 +115,73 @@ Schreibe in einer warmen, unterstützenden Sprache.`,
   },
 ] as const;
 
+// Vordefinierte Prompt-Vorlagen für SIS-Prüfung
+const CHECK_PROMPT_TEMPLATES = [
+  {
+    id: "standard",
+    name: "Standard-Prüfung",
+    description: "Umfassende Prüfung aller Aspekte der SIS",
+    prompt: DEFAULT_CHECK_PROMPT,
+  },
+  {
+    id: "schnellcheck",
+    name: "Schnellcheck",
+    description: "Kurze Prüfung auf die wichtigsten Punkte",
+    prompt: `Du bist ein erfahrener Pflegeexperte. Führe einen schnellen Qualitätscheck der SIS durch.
+
+Prüfe kurz und prägnant:
+- Sind alle Pflichtfelder ausgefüllt?
+- Gibt es offensichtliche Widersprüche?
+- Sind die Risiken plausibel eingeschätzt?
+
+Gib eine kurze Zusammenfassung (max. 5 Punkte) mit den wichtigsten Hinweisen.`,
+  },
+  {
+    id: "mdkpruefung",
+    name: "MDK-Prüfungsvorbereitung",
+    description: "Prüfung nach MDK-Qualitätskriterien",
+    prompt: `Du bist ein erfahrener Pflegeexperte mit Expertise in MDK-Qualitätsprüfungen. Prüfe die SIS nach den Kriterien, die bei einer MDK-Prüfung relevant sind.
+
+Achte besonders auf:
+- Nachvollziehbarkeit der pflegefachlichen Einschätzungen
+- Dokumentation der individuellen Situation
+- Berücksichtigung aller relevanten Risikobereiche
+- Einbeziehung der Perspektive der pflegebedürftigen Person
+- Konsistenz zwischen Einschätzung und Risikomatrix
+
+Gib Hinweise, welche Aspekte bei einer MDK-Prüfung kritisch hinterfragt werden könnten.`,
+  },
+  {
+    id: "risikofokus",
+    name: "Risiko-Fokus",
+    description: "Schwerpunkt auf Risikoeinschätzung",
+    prompt: `Du bist ein erfahrener Pflegeexperte mit Spezialisierung auf Risikoprävention. Prüfe die SIS mit besonderem Fokus auf die Risikoeinschätzung.
+
+Prüfe:
+- Sind alle relevanten Risiken identifiziert?
+- Passen die Risikoeinstufungen zu den dokumentierten Einschätzungen?
+- Wurden Risiken möglicherweise übersehen oder unterschätzt?
+- Ist der Bedarf an weiterer Einschätzung korrekt markiert?
+
+Gib konkrete Empfehlungen zur Verbesserung der Risikoeinschätzung.`,
+  },
+  {
+    id: "dokumentation",
+    name: "Dokumentationsqualität",
+    description: "Prüfung der Dokumentationsqualität",
+    prompt: `Du bist ein erfahrener Pflegeexperte und Dokumentationsberater. Prüfe die SIS auf die Qualität der Dokumentation.
+
+Achte auf:
+- Verständlichkeit und Klarheit der Formulierungen
+- Vermeidung von Floskeln und Standardtexten
+- Individuelle, personenbezogene Beschreibungen
+- Nachvollziehbarkeit für Dritte (z.B. Vertretungskräfte)
+- Rechtliche Absicherung der Dokumentation
+
+Gib Tipps zur Verbesserung der Dokumentationsqualität.`,
+  },
+] as const;
+
 // Risikomatrix Schema
 const riskMatrixSchema = z.object({
   dekubitus: z.object({
@@ -161,6 +244,7 @@ const sisEntryInputSchema = z.object({
   themenfeld6: z.string().optional(),
   riskMatrix: riskMatrixSchema,
   massnahmenplan: z.string().optional(),
+  pruefungsergebnis: z.string().optional(),
 });
 
 export const appRouter = router({
@@ -243,7 +327,7 @@ export const appRouter = router({
         }
 
         // Build prompt from SIS data
-        const prompt = buildMassnahmenplanPrompt(entry);
+        const prompt = buildSisPrompt(entry);
         
         // Get custom system prompt or use default
         const systemPrompt = await getGlobalSetting("system_prompt") || DEFAULT_SYSTEM_PROMPT;
@@ -288,6 +372,77 @@ export const appRouter = router({
 
         return { plan };
       }),
+
+    // Check SIS using OpenAI (separate function)
+    checkSis: protectedProcedure
+      .input(z.object({
+        id: z.number(),
+        apiKey: z.string().optional(),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        const entry = await getSisEntry(input.id, ctx.user.id);
+        if (!entry) {
+          throw new Error("SIS-Eintrag nicht gefunden");
+        }
+
+        // Get API key - prefer user-provided, then user-saved, then system env
+        let apiKey = input.apiKey;
+        if (!apiKey) {
+          apiKey = await getSetting(ctx.user.id, "openai_api_key") || undefined;
+        }
+        if (!apiKey) {
+          apiKey = process.env.OPENAI_API_KEY;
+        }
+        if (!apiKey) {
+          throw new Error("Kein OpenAI API-Key verfügbar. Bitte hinterlegen Sie einen API-Key in den Einstellungen.");
+        }
+
+        // Build prompt from SIS data
+        const prompt = buildSisPrompt(entry);
+        
+        // Get custom system prompt for checking or use default
+        const systemPrompt = await getGlobalSetting("check_system_prompt") || DEFAULT_CHECK_PROMPT;
+        
+        // Get selected model for checking or use default
+        const selectedModel = await getGlobalSetting("check_openai_model") || DEFAULT_MODEL;
+
+        // Call OpenAI API
+        const response = await fetch("https://api.openai.com/v1/chat/completions", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${apiKey}`,
+          },
+          body: JSON.stringify({
+            model: selectedModel,
+            messages: [
+              {
+                role: "system",
+                content: systemPrompt
+              },
+              {
+                role: "user",
+                content: prompt
+              }
+            ],
+            temperature: 0.7,
+            max_tokens: 4000,
+          }),
+        });
+
+        if (!response.ok) {
+          const error = await response.json();
+          throw new Error(error.error?.message || "OpenAI API Fehler");
+        }
+
+        const data = await response.json();
+        const result = data.choices[0]?.message?.content || "";
+
+        // Save the check result
+        await updateSisEntry(input.id, ctx.user.id, { pruefungsergebnis: result });
+
+        return { result };
+      }),
   }),
 
   settings: router({
@@ -323,7 +478,9 @@ export const appRouter = router({
         return ctx.user.role === "admin";
       }),
 
-    // Get system prompt
+    // ============ MAASSNAHMENPLAN SETTINGS ============
+    
+    // Get system prompt for Maßnahmenplan
     getSystemPrompt: protectedProcedure
       .query(async ({ ctx }) => {
         if (ctx.user.role !== "admin") {
@@ -333,7 +490,7 @@ export const appRouter = router({
         return prompt || DEFAULT_SYSTEM_PROMPT;
       }),
 
-    // Save system prompt
+    // Save system prompt for Maßnahmenplan
     setSystemPrompt: protectedProcedure
       .input(z.object({ prompt: z.string().min(1, "Prompt darf nicht leer sein") }))
       .mutation(async ({ ctx, input }) => {
@@ -344,7 +501,7 @@ export const appRouter = router({
         return { success: true };
       }),
 
-    // Reset to default prompt
+    // Reset to default prompt for Maßnahmenplan
     resetSystemPrompt: protectedProcedure
       .mutation(async ({ ctx }) => {
         if (ctx.user.role !== "admin") {
@@ -363,7 +520,7 @@ export const appRouter = router({
         return AVAILABLE_MODELS;
       }),
 
-    // Get selected model
+    // Get selected model for Maßnahmenplan
     getSelectedModel: protectedProcedure
       .query(async ({ ctx }) => {
         if (ctx.user.role !== "admin") {
@@ -373,7 +530,7 @@ export const appRouter = router({
         return model || DEFAULT_MODEL;
       }),
 
-    // Set selected model
+    // Set selected model for Maßnahmenplan
     setModel: protectedProcedure
       .input(z.object({ model: z.string() }))
       .mutation(async ({ ctx, input }) => {
@@ -388,7 +545,7 @@ export const appRouter = router({
         return { success: true };
       }),
 
-    // Get prompt templates
+    // Get prompt templates for Maßnahmenplan
     getPromptTemplates: protectedProcedure
       .query(({ ctx }) => {
         if (ctx.user.role !== "admin") {
@@ -397,7 +554,7 @@ export const appRouter = router({
         return PROMPT_TEMPLATES;
       }),
 
-    // Apply a prompt template
+    // Apply a prompt template for Maßnahmenplan
     applyTemplate: protectedProcedure
       .input(z.object({ templateId: z.string() }))
       .mutation(async ({ ctx, input }) => {
@@ -411,10 +568,92 @@ export const appRouter = router({
         await setGlobalSetting("system_prompt", template.prompt);
         return { success: true, prompt: template.prompt };
       }),
+
+    // ============ SIS-PRÜFUNG SETTINGS ============
+
+    // Get system prompt for SIS-Prüfung
+    getCheckSystemPrompt: protectedProcedure
+      .query(async ({ ctx }) => {
+        if (ctx.user.role !== "admin") {
+          throw new TRPCError({ code: "FORBIDDEN", message: "Nur Administratoren haben Zugriff" });
+        }
+        const prompt = await getGlobalSetting("check_system_prompt");
+        return prompt || DEFAULT_CHECK_PROMPT;
+      }),
+
+    // Save system prompt for SIS-Prüfung
+    setCheckSystemPrompt: protectedProcedure
+      .input(z.object({ prompt: z.string().min(1, "Prompt darf nicht leer sein") }))
+      .mutation(async ({ ctx, input }) => {
+        if (ctx.user.role !== "admin") {
+          throw new TRPCError({ code: "FORBIDDEN", message: "Nur Administratoren haben Zugriff" });
+        }
+        await setGlobalSetting("check_system_prompt", input.prompt);
+        return { success: true };
+      }),
+
+    // Reset to default prompt for SIS-Prüfung
+    resetCheckSystemPrompt: protectedProcedure
+      .mutation(async ({ ctx }) => {
+        if (ctx.user.role !== "admin") {
+          throw new TRPCError({ code: "FORBIDDEN", message: "Nur Administratoren haben Zugriff" });
+        }
+        await setGlobalSetting("check_system_prompt", DEFAULT_CHECK_PROMPT);
+        return { success: true, prompt: DEFAULT_CHECK_PROMPT };
+      }),
+
+    // Get selected model for SIS-Prüfung
+    getCheckSelectedModel: protectedProcedure
+      .query(async ({ ctx }) => {
+        if (ctx.user.role !== "admin") {
+          throw new TRPCError({ code: "FORBIDDEN", message: "Nur Administratoren haben Zugriff" });
+        }
+        const model = await getGlobalSetting("check_openai_model");
+        return model || DEFAULT_MODEL;
+      }),
+
+    // Set selected model for SIS-Prüfung
+    setCheckModel: protectedProcedure
+      .input(z.object({ model: z.string() }))
+      .mutation(async ({ ctx, input }) => {
+        if (ctx.user.role !== "admin") {
+          throw new TRPCError({ code: "FORBIDDEN", message: "Nur Administratoren haben Zugriff" });
+        }
+        const validModels = AVAILABLE_MODELS.map(m => m.id);
+        if (!validModels.includes(input.model as any)) {
+          throw new TRPCError({ code: "BAD_REQUEST", message: "Ungültiges Modell" });
+        }
+        await setGlobalSetting("check_openai_model", input.model);
+        return { success: true };
+      }),
+
+    // Get prompt templates for SIS-Prüfung
+    getCheckPromptTemplates: protectedProcedure
+      .query(({ ctx }) => {
+        if (ctx.user.role !== "admin") {
+          throw new TRPCError({ code: "FORBIDDEN", message: "Nur Administratoren haben Zugriff" });
+        }
+        return CHECK_PROMPT_TEMPLATES;
+      }),
+
+    // Apply a prompt template for SIS-Prüfung
+    applyCheckTemplate: protectedProcedure
+      .input(z.object({ templateId: z.string() }))
+      .mutation(async ({ ctx, input }) => {
+        if (ctx.user.role !== "admin") {
+          throw new TRPCError({ code: "FORBIDDEN", message: "Nur Administratoren haben Zugriff" });
+        }
+        const template = CHECK_PROMPT_TEMPLATES.find(t => t.id === input.templateId);
+        if (!template) {
+          throw new TRPCError({ code: "BAD_REQUEST", message: "Vorlage nicht gefunden" });
+        }
+        await setGlobalSetting("check_system_prompt", template.prompt);
+        return { success: true, prompt: template.prompt };
+      }),
   }),
 });
 
-function buildMassnahmenplanPrompt(entry: any): string {
+function buildSisPrompt(entry: any): string {
   const riskMatrix = entry.riskMatrix as any;
   
   let prompt = `# Strukturierte Informationssammlung (SIS)
@@ -480,9 +719,6 @@ ${entry.themenfeld6 || "Keine Angaben"}
       }
     }
   }
-
-  prompt += `
-Bitte erstelle basierend auf diesen Informationen einen individuellen Maßnahmenplan.`;
 
   return prompt;
 }

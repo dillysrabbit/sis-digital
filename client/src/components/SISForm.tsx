@@ -5,7 +5,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Save, Sparkles, Loader2 } from "lucide-react";
+import { Save, Sparkles, Loader2, ClipboardCheck } from "lucide-react";
 
 export interface RiskMatrixData {
   dekubitus?: { tf1?: { ja: boolean; weitere: boolean }; tf2?: { ja: boolean; weitere: boolean }; tf3?: { ja: boolean; weitere: boolean }; tf4?: { ja: boolean; weitere: boolean }; tf5?: { ja: boolean; weitere: boolean } };
@@ -36,8 +36,10 @@ interface SISFormProps {
   initialData?: Partial<SISFormData>;
   onSave: (data: SISFormData) => void;
   onGeneratePlan: () => void;
+  onCheckSis?: () => void;
   isSaving?: boolean;
   isGenerating?: boolean;
+  isChecking?: boolean;
 }
 
 const defaultRiskMatrix: RiskMatrixData = {
@@ -49,7 +51,7 @@ const defaultRiskMatrix: RiskMatrixData = {
   sonstiges: { tf1: { ja: false, weitere: false }, tf2: { ja: false, weitere: false }, tf3: { ja: false, weitere: false }, tf4: { ja: false, weitere: false }, tf5: { ja: false, weitere: false } },
 };
 
-export function SISForm({ initialData, onSave, onGeneratePlan, isSaving, isGenerating }: SISFormProps) {
+export function SISForm({ initialData, onSave, onGeneratePlan, onCheckSis, isSaving, isGenerating, isChecking }: SISFormProps) {
   const [formData, setFormData] = useState<SISFormData>({
     patientName: initialData?.patientName || "",
     birthDate: initialData?.birthDate || "",
@@ -305,6 +307,12 @@ export function SISForm({ initialData, onSave, onGeneratePlan, isSaving, isGener
           {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
           Speichern
         </Button>
+        {onCheckSis && (
+          <Button onClick={onCheckSis} disabled={isChecking || !formData.patientName} variant="outline" className="gap-2 border-orange-500 text-orange-600 hover:bg-orange-50">
+            {isChecking ? <Loader2 className="h-4 w-4 animate-spin" /> : <ClipboardCheck className="h-4 w-4" />}
+            SIS prüfen
+          </Button>
+        )}
         <Button onClick={onGeneratePlan} disabled={isGenerating || !formData.patientName} variant="default" className="gap-2 bg-green-600 hover:bg-green-700">
           {isGenerating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
           Maßnahmenplan generieren

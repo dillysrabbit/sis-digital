@@ -1,0 +1,9 @@
+{
+  "query": "ALTER TABLE `sis_entries` ADD `pruefungsergebnis` text;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user Guw1zSUGzxPuu8n.1ab5e0124a8d --database VnmR7u5tmyFFxNimaMZLHx --execute ALTER TABLE `sis_entries` ADD `pruefungsergebnis` text;",
+  "rows": [],
+  "messages": [],
+  "stdout": "",
+  "stderr": "",
+  "execution_time_ms": 584
+}

@@ -1,23 +1,32 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Copy, Share2, Check, FileText } from "lucide-react";
+import { Copy, Share2, Check, FileText, ClipboardCheck } from "lucide-react";
 import { toast } from "sonner";
 import { Streamdown } from "streamdown";
 
 interface MassnahmenplanDisplayProps {
   plan: string;
   patientName: string;
+  title?: string;
+  emptyMessage?: string;
+  icon?: string;
 }
 
-export function MassnahmenplanDisplay({ plan, patientName }: MassnahmenplanDisplayProps) {
+export function MassnahmenplanDisplay({ 
+  plan, 
+  patientName, 
+  title = "Individueller Maßnahmenplan",
+  emptyMessage = "Noch kein Maßnahmenplan generiert. Füllen Sie das SIS-Formular aus und klicken Sie auf 'Maßnahmenplan generieren'.",
+  icon = "📋"
+}: MassnahmenplanDisplayProps) {
   const [copied, setCopied] = useState(false);
 
   const handleCopy = async () => {
     try {
       await navigator.clipboard.writeText(plan);
       setCopied(true);
-      toast.success("Maßnahmenplan in die Zwischenablage kopiert");
+      toast.success("In die Zwischenablage kopiert");
       setTimeout(() => setCopied(false), 2000);
     } catch (err) {
       toast.error("Kopieren fehlgeschlagen");
@@ -28,7 +37,7 @@ export function MassnahmenplanDisplay({ plan, patientName }: MassnahmenplanDispl
     if (navigator.share) {
       try {
         await navigator.share({
-          title: `Maßnahmenplan für ${patientName}`,
+          title: `${title} für ${patientName}`,
           text: plan,
         });
         toast.success("Erfolgreich geteilt");
@@ -44,15 +53,22 @@ export function MassnahmenplanDisplay({ plan, patientName }: MassnahmenplanDispl
     }
   };
 
+  // Determine if this is a check result based on icon
+  const isCheckResult = icon === "🔍";
+  const gradientClass = isCheckResult 
+    ? "bg-gradient-to-r from-orange-500 to-orange-600" 
+    : "bg-gradient-to-r from-green-600 to-green-700";
+
   if (!plan) {
     return (
       <Card className="border-dashed">
         <CardContent className="py-12 text-center text-muted-foreground">
-          <FileText className="h-12 w-12 mx-auto mb-4 opacity-50" />
-          <p>Noch kein Maßnahmenplan generiert.</p>
-          <p className="text-sm mt-2">
-            Füllen Sie das SIS-Formular aus und klicken Sie auf "Maßnahmenplan generieren".
-          </p>
+          {isCheckResult ? (
+            <ClipboardCheck className="h-12 w-12 mx-auto mb-4 opacity-50" />
+          ) : (
+            <FileText className="h-12 w-12 mx-auto mb-4 opacity-50" />
+          )}
+          <p className="whitespace-pre-line">{emptyMessage}</p>
         </CardContent>
       </Card>
     );
@@ -60,11 +76,11 @@ export function MassnahmenplanDisplay({ plan, patientName }: MassnahmenplanDispl
 
   return (
     <Card>
-      <CardHeader className="bg-gradient-to-r from-green-600 to-green-700 text-white rounded-t-lg">
+      <CardHeader className={`${gradientClass} text-white rounded-t-lg`}>
         <div className="flex items-center justify-between">
           <CardTitle className="text-lg font-semibold flex items-center gap-2">
-            <FileText className="h-5 w-5" />
-            Individueller Maßnahmenplan
+            <span className="text-xl">{icon}</span>
+            {title}
           </CardTitle>
           <div className="flex gap-2">
             <Button
