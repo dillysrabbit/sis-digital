@@ -50,3 +50,10 @@
 - [x] Frontend: "SIS prüfen" Button im SIS-Editor
 - [x] Frontend: Anzeige des Prüfungsergebnisses
 - [x] Tests für SIS-Prüfung Funktionen
+
+## PDF-Export Funktion
+- [x] Backend: PDF-Generierung mit allen SIS-Daten
+- [x] Backend: Maßnahmenplan und Prüfungsergebnis im PDF
+- [x] Frontend: Export-Button im SIS-Editor
+- [x] Frontend: Download-Funktion für generiertes PDF
+- [x] Tests für PDF-Export

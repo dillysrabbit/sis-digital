@@ -5,6 +5,7 @@ import { publicProcedure, protectedProcedure, router } from "./_core/trpc";
 import { z } from "zod";
 import { createSisEntry, updateSisEntry, getSisEntry, listSisEntries, deleteSisEntry, getSetting, setSetting, getGlobalSetting, setGlobalSetting } from "./db";
 import { TRPCError } from "@trpc/server";
+import { generateSisPdfHtml } from "./pdfGenerator";
 
 // Verfügbare OpenAI Modelle
 const AVAILABLE_MODELS = [
@@ -300,6 +301,18 @@ export const appRouter = router({
       .mutation(async ({ ctx, input }) => {
         await deleteSisEntry(input.id, ctx.user.id);
         return { success: true };
+      }),
+
+    // Generate PDF HTML for export
+    exportPdfHtml: protectedProcedure
+      .input(z.object({ id: z.number() }))
+      .query(async ({ ctx, input }) => {
+        const entry = await getSisEntry(input.id, ctx.user.id);
+        if (!entry) {
+          throw new TRPCError({ code: "NOT_FOUND", message: "SIS-Eintrag nicht gefunden" });
+        }
+        const html = generateSisPdfHtml(entry);
+        return { html, patientName: entry.patientName };
       }),
 
     // Generate Maßnahmenplan using OpenAI

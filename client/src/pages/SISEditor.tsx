@@ -7,7 +7,7 @@ import { ApiKeySettings } from "@/components/ApiKeySettings";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
-import { ArrowLeft, Loader2, FileCheck, ClipboardCheck } from "lucide-react";
+import { ArrowLeft, Loader2, FileCheck, ClipboardCheck, FileDown } from "lucide-react";
 
 export default function SISEditor() {
   const params = useParams<{ id?: string }>();
@@ -19,6 +19,7 @@ export default function SISEditor() {
   const [massnahmenplan, setMassnahmenplan] = useState<string>("");
   const [pruefungsergebnis, setPruefungsergebnis] = useState<string>("");
   const [activeTab, setActiveTab] = useState<string>("massnahmenplan");
+  const [isExporting, setIsExporting] = useState(false);
 
   // Fetch existing entry if editing
   const { data: existingEntry, isLoading: isLoadingEntry } = trpc.sis.get.useQuery(
@@ -112,6 +113,59 @@ export default function SISEditor() {
     await checkSis.mutateAsync({ id, apiKey: apiKey || undefined });
   };
 
+  const handleExportPdf = async () => {
+    const id = currentEntryId || entryId;
+    if (!id) {
+      toast.error("Bitte speichern Sie den Eintrag zuerst");
+      return;
+    }
+
+    setIsExporting(true);
+    try {
+      // Fetch HTML from server
+      const response = await fetch(`/api/trpc/sis.exportPdfHtml?input=${encodeURIComponent(JSON.stringify({ id }))}`);
+      const data = await response.json();
+      
+      if (data.error) {
+        throw new Error(data.error.message || "Export fehlgeschlagen");
+      }
+      
+      const { html, patientName } = data.result.data;
+      
+      // Open print dialog in new window
+      const printWindow = window.open('', '_blank');
+      if (printWindow) {
+        printWindow.document.write(html);
+        printWindow.document.close();
+        
+        // Wait for content to load then trigger print
+        printWindow.onload = () => {
+          setTimeout(() => {
+            printWindow.print();
+          }, 250);
+        };
+        
+        toast.success("PDF-Export wird vorbereitet...");
+      } else {
+        // Fallback: Download as HTML file
+        const blob = new Blob([html], { type: 'text/html' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `SIS_${patientName.replace(/\s+/g, '_')}_${new Date().toISOString().split('T')[0]}.html`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        toast.success("HTML-Datei heruntergeladen. Öffnen Sie diese und drucken Sie als PDF.");
+      }
+    } catch (error) {
+      toast.error(`Export fehlgeschlagen: ${(error as Error).message}`);
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
   if (isLoadingEntry && entryId) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -153,7 +207,23 @@ export default function SISEditor() {
                 {isNew ? "Neue SIS erstellen" : `SIS bearbeiten`}
               </h1>
             </div>
-            <ApiKeySettings onApiKeySaved={refetchApiKey} />
+            <div className="flex items-center gap-2">
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={handleExportPdf}
+                disabled={isExporting || !currentEntryId}
+                className="gap-2"
+              >
+                {isExporting ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <FileDown className="h-4 w-4" />
+                )}
+                PDF exportieren
+              </Button>
+              <ApiKeySettings onApiKeySaved={refetchApiKey} />
+            </div>
           </div>
         </div>
       </header>
