@@ -1,6 +1,6 @@
 import { eq, and, desc } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
-import { InsertUser, users, sisEntries, InsertSisEntry, SisEntry, appSettings, InsertAppSetting } from "../drizzle/schema";
+import { InsertUser, users, sisEntries, InsertSisEntry, SisEntry, appSettings, InsertAppSetting, globalSettings } from "../drizzle/schema";
 import { ENV } from './_core/env';
 
 let _db: ReturnType<typeof drizzle> | null = null;
@@ -165,6 +165,40 @@ export async function setSetting(userId: number, key: string, value: string): Pr
   } else {
     await db.insert(appSettings).values({
       userId,
+      settingKey: key,
+      settingValue: value,
+    });
+  }
+}
+
+// Global Settings functions (Admin-only)
+export async function getGlobalSetting(key: string): Promise<string | null> {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  const result = await db.select()
+    .from(globalSettings)
+    .where(eq(globalSettings.settingKey, key))
+    .limit(1);
+  
+  return result.length > 0 ? result[0].settingValue : null;
+}
+
+export async function setGlobalSetting(key: string, value: string): Promise<void> {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  const existing = await db.select()
+    .from(globalSettings)
+    .where(eq(globalSettings.settingKey, key))
+    .limit(1);
+  
+  if (existing.length > 0) {
+    await db.update(globalSettings)
+      .set({ settingValue: value })
+      .where(eq(globalSettings.settingKey, key));
+  } else {
+    await db.insert(globalSettings).values({
       settingKey: key,
       settingValue: value,
     });

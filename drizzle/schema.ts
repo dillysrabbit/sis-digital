@@ -71,3 +71,17 @@ export const appSettings = mysqlTable("app_settings", {
 
 export type AppSetting = typeof appSettings.$inferSelect;
 export type InsertAppSetting = typeof appSettings.$inferInsert;
+
+/**
+ * Globale App-Einstellungen (Admin-only)
+ */
+export const globalSettings = mysqlTable("global_settings", {
+  id: int("id").autoincrement().primaryKey(),
+  settingKey: varchar("settingKey", { length: 100 }).notNull().unique(),
+  settingValue: text("settingValue"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type GlobalSetting = typeof globalSettings.$inferSelect;
+export type InsertGlobalSetting = typeof globalSettings.$inferInsert;

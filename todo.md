@@ -27,3 +27,9 @@
 ## Tests
 - [x] Unit-Tests für tRPC-Prozeduren
 - [x] Validierung der Formularfelder
+
+## Admin-Bereich
+- [x] Admin-Seite für Systemprompt-Editor erstellen
+- [x] Systemprompt in Datenbank speichern
+- [x] Zugriffsschutz nur für Eigentümer (Admin-Rolle)
+- [x] Navigation zum Admin-Bereich (nur für Admin sichtbar)

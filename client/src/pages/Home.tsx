@@ -4,7 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { trpc } from "@/lib/trpc";
 import { getLoginUrl } from "@/const";
 import { useLocation } from "wouter";
-import { Plus, FileText, Trash2, Edit, Calendar, User, Loader2, LogIn, ClipboardList } from "lucide-react";
+import { Plus, FileText, Trash2, Edit, Calendar, User, Loader2, LogIn, ClipboardList, Shield } from "lucide-react";
 import { toast } from "sonner";
 import {
   AlertDialog,
@@ -23,6 +23,10 @@ export default function Home() {
   const [, setLocation] = useLocation();
 
   const { data: entries, isLoading: entriesLoading, refetch } = trpc.sis.list.useQuery(undefined, {
+    enabled: isAuthenticated,
+  });
+
+  const { data: isAdmin } = trpc.admin.isAdmin.useQuery(undefined, {
     enabled: isAuthenticated,
   });
 
@@ -122,6 +126,12 @@ export default function Home() {
               <span className="text-sm text-muted-foreground">
                 Angemeldet als {user?.name || user?.email || "Benutzer"}
               </span>
+              {isAdmin && (
+                <Button variant="outline" onClick={() => setLocation("/admin")} className="gap-2">
+                  <Shield className="h-4 w-4" />
+                  Admin
+                </Button>
+              )}
               <Button onClick={() => setLocation("/sis/new")} className="gap-2">
                 <Plus className="h-4 w-4" />
                 Neue SIS

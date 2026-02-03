@@ -1,0 +1,9 @@
+{
+  "query": "CREATE TABLE `global_settings` (\n\t`id` int AUTO_INCREMENT NOT NULL,\n\t`settingKey` varchar(100) NOT NULL,\n\t`settingValue` text,\n\t`createdAt` timestamp NOT NULL DEFAULT (now()),\n\t`updatedAt` timestamp NOT NULL DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP,\n\tCONSTRAINT `global_settings_id` PRIMARY KEY(`id`),\n\tCONSTRAINT `global_settings_settingKey_unique` UNIQUE(`settingKey`)\n);",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user Guw1zSUGzxPuu8n.1ab5e0124a8d --database VnmR7u5tmyFFxNimaMZLHx --execute CREATE TABLE `global_settings` (\n\t`id` int AUTO_INCREMENT NOT NULL,\n\t`settingKey` varchar(100) NOT NULL,\n\t`settingValue` text,\n\t`createdAt` timestamp NOT NULL DEFAULT (now()),\n\t`updatedAt` timestamp NOT NULL DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP,\n\tCONSTRAINT `global_settings_id` PRIMARY KEY(`id`),\n\tCONSTRAINT `global_settings_settingKey_unique` UNIQUE(`settingKey`)\n);",
+  "rows": [],
+  "messages": [],
+  "stdout": "",
+  "stderr": "",
+  "execution_time_ms": 212
+}

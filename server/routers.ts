@@ -3,7 +3,20 @@ import { getSessionCookieOptions } from "./_core/cookies";
 import { systemRouter } from "./_core/systemRouter";
 import { publicProcedure, protectedProcedure, router } from "./_core/trpc";
 import { z } from "zod";
-import { createSisEntry, updateSisEntry, getSisEntry, listSisEntries, deleteSisEntry, getSetting, setSetting } from "./db";
+import { createSisEntry, updateSisEntry, getSisEntry, listSisEntries, deleteSisEntry, getSetting, setSetting, getGlobalSetting, setGlobalSetting } from "./db";
+import { TRPCError } from "@trpc/server";
+
+// Default System Prompt für die Maßnahmenplan-Generierung
+const DEFAULT_SYSTEM_PROMPT = `Du bist ein erfahrener Pflegeexperte und erstellst individuelle Maßnahmenpläne basierend auf der Strukturierten Informationssammlung (SIS). 
+                
+Erstelle einen detaillierten, praxisnahen Maßnahmenplan, der:
+- Auf die individuellen Bedürfnisse und Ressourcen der pflegebedürftigen Person eingeht
+- Konkrete, umsetzbare Maßnahmen für jedes relevante Themenfeld enthält
+- Die identifizierten Risiken berücksichtigt
+- Die Wünsche und Perspektive der pflegebedürftigen Person (O-Ton) einbezieht
+- Professionell und verständlich formuliert ist
+
+Strukturiere den Maßnahmenplan nach Themenfeldern und priorisiere nach Dringlichkeit.`;
 
 // Risikomatrix Schema
 const riskMatrixSchema = z.object({
@@ -151,6 +164,9 @@ export const appRouter = router({
         // Build prompt from SIS data
         const prompt = buildMassnahmenplanPrompt(entry);
         
+        // Get custom system prompt or use default
+        const systemPrompt = await getGlobalSetting("system_prompt") || DEFAULT_SYSTEM_PROMPT;
+
         // Call OpenAI API
         const response = await fetch("https://api.openai.com/v1/chat/completions", {
           method: "POST",
@@ -163,16 +179,7 @@ export const appRouter = router({
             messages: [
               {
                 role: "system",
-                content: `Du bist ein erfahrener Pflegeexperte und erstellst individuelle Maßnahmenpläne basierend auf der Strukturierten Informationssammlung (SIS). 
-                
-Erstelle einen detaillierten, praxisnahen Maßnahmenplan, der:
-- Auf die individuellen Bedürfnisse und Ressourcen der pflegebedürftigen Person eingeht
-- Konkrete, umsetzbare Maßnahmen für jedes relevante Themenfeld enthält
-- Die identifizierten Risiken berücksichtigt
-- Die Wünsche und Perspektive der pflegebedürftigen Person (O-Ton) einbezieht
-- Professionell und verständlich formuliert ist
-
-Strukturiere den Maßnahmenplan nach Themenfeldern und priorisiere nach Dringlichkeit.`
+                content: systemPrompt
               },
               {
                 role: "user",
@@ -221,6 +228,46 @@ Strukturiere den Maßnahmenplan nach Themenfeldern und priorisiere nach Dringlic
     getFullApiKey: protectedProcedure
       .query(async ({ ctx }) => {
         return await getSetting(ctx.user.id, "openai_api_key");
+      }),
+  }),
+
+  // Admin-only routes
+  admin: router({
+    // Check if user is admin
+    isAdmin: protectedProcedure
+      .query(({ ctx }) => {
+        return ctx.user.role === "admin";
+      }),
+
+    // Get system prompt
+    getSystemPrompt: protectedProcedure
+      .query(async ({ ctx }) => {
+        if (ctx.user.role !== "admin") {
+          throw new TRPCError({ code: "FORBIDDEN", message: "Nur Administratoren haben Zugriff" });
+        }
+        const prompt = await getGlobalSetting("system_prompt");
+        return prompt || DEFAULT_SYSTEM_PROMPT;
+      }),
+
+    // Save system prompt
+    setSystemPrompt: protectedProcedure
+      .input(z.object({ prompt: z.string().min(1, "Prompt darf nicht leer sein") }))
+      .mutation(async ({ ctx, input }) => {
+        if (ctx.user.role !== "admin") {
+          throw new TRPCError({ code: "FORBIDDEN", message: "Nur Administratoren haben Zugriff" });
+        }
+        await setGlobalSetting("system_prompt", input.prompt);
+        return { success: true };
+      }),
+
+    // Reset to default prompt
+    resetSystemPrompt: protectedProcedure
+      .mutation(async ({ ctx }) => {
+        if (ctx.user.role !== "admin") {
+          throw new TRPCError({ code: "FORBIDDEN", message: "Nur Administratoren haben Zugriff" });
+        }
+        await setGlobalSetting("system_prompt", DEFAULT_SYSTEM_PROMPT);
+        return { success: true, prompt: DEFAULT_SYSTEM_PROMPT };
       }),
   }),
 });

@@ -15,6 +15,13 @@
       "when": 1770095149638,
       "tag": "0001_thankful_katie_power",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "5",
+      "when": 1770096250827,
+      "tag": "0002_optimal_james_howlett",
+      "breakpoints": true
     }
   ]
 }
