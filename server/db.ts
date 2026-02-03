@@ -1,11 +1,10 @@
-import { eq } from "drizzle-orm";
+import { eq, and, desc } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
-import { InsertUser, users } from "../drizzle/schema";
+import { InsertUser, users, sisEntries, InsertSisEntry, SisEntry, appSettings, InsertAppSetting } from "../drizzle/schema";
 import { ENV } from './_core/env';
 
 let _db: ReturnType<typeof drizzle> | null = null;
 
-// Lazily create the drizzle instance so local tooling can run without a DB.
 export async function getDb() {
   if (!_db && process.env.DATABASE_URL) {
     try {
@@ -89,4 +88,85 @@ export async function getUserByOpenId(openId: string) {
   return result.length > 0 ? result[0] : undefined;
 }
 
-// TODO: add feature queries here as your schema grows.
+// SIS Entry functions
+export async function createSisEntry(entry: InsertSisEntry): Promise<number> {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  const result = await db.insert(sisEntries).values(entry);
+  return result[0].insertId;
+}
+
+export async function updateSisEntry(id: number, userId: number, entry: Partial<InsertSisEntry>): Promise<void> {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  await db.update(sisEntries)
+    .set(entry)
+    .where(and(eq(sisEntries.id, id), eq(sisEntries.userId, userId)));
+}
+
+export async function getSisEntry(id: number, userId: number): Promise<SisEntry | undefined> {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  const result = await db.select()
+    .from(sisEntries)
+    .where(and(eq(sisEntries.id, id), eq(sisEntries.userId, userId)))
+    .limit(1);
+  
+  return result.length > 0 ? result[0] : undefined;
+}
+
+export async function listSisEntries(userId: number): Promise<SisEntry[]> {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  return await db.select()
+    .from(sisEntries)
+    .where(eq(sisEntries.userId, userId))
+    .orderBy(desc(sisEntries.updatedAt));
+}
+
+export async function deleteSisEntry(id: number, userId: number): Promise<void> {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  await db.delete(sisEntries)
+    .where(and(eq(sisEntries.id, id), eq(sisEntries.userId, userId)));
+}
+
+// App Settings functions
+export async function getSetting(userId: number, key: string): Promise<string | null> {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  const result = await db.select()
+    .from(appSettings)
+    .where(and(eq(appSettings.userId, userId), eq(appSettings.settingKey, key)))
+    .limit(1);
+  
+  return result.length > 0 ? result[0].settingValue : null;
+}
+
+export async function setSetting(userId: number, key: string, value: string): Promise<void> {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  const existing = await db.select()
+    .from(appSettings)
+    .where(and(eq(appSettings.userId, userId), eq(appSettings.settingKey, key)))
+    .limit(1);
+  
+  if (existing.length > 0) {
+    await db.update(appSettings)
+      .set({ settingValue: value })
+      .where(and(eq(appSettings.userId, userId), eq(appSettings.settingKey, key)));
+  } else {
+    await db.insert(appSettings).values({
+      userId,
+      settingKey: key,
+      settingValue: value,
+    });
+  }
+}

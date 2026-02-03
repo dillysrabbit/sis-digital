@@ -43,6 +43,15 @@
 }
 
 :root {
+  /* SIS Theme Colors */
+  --sis-oton: oklch(0.628 0.258 29.234);
+  --sis-tf1: oklch(0.792 0.209 60.626);
+  --sis-tf2: oklch(0.905 0.182 98.111);
+  --sis-tf3: oklch(0.648 0.2 142.495);
+  --sis-tf4: oklch(0.496 0.265 303.9);
+  --sis-tf5: oklch(0.623 0.214 259.815);
+  --sis-tf6: oklch(0.698 0.147 200.723);
+  
   --primary: var(--color-blue-700);
   --primary-foreground: var(--color-blue-50);
   --sidebar-primary: var(--color-blue-600);
@@ -173,5 +182,54 @@
       padding-right: 2rem;
       max-width: 1280px; /* Standard content width */
     }
+  }
+}
+
+/* SIS Field Colors */
+.sis-oton {
+  background-color: var(--sis-oton);
+}
+
+.sis-tf1 {
+  background-color: var(--sis-tf1);
+}
+
+.sis-tf2 {
+  background-color: var(--sis-tf2);
+}
+
+.sis-tf3 {
+  background-color: var(--sis-tf3);
+}
+
+.sis-tf4 {
+  background-color: var(--sis-tf4);
+}
+
+.sis-tf5 {
+  background-color: var(--sis-tf5);
+}
+
+.sis-tf6 {
+  background-color: var(--sis-tf6);
+}
+
+/* Risk Matrix Styling */
+.risk-matrix-cell {
+  @apply border border-gray-300 p-1 text-center;
+}
+
+.risk-matrix-header {
+  @apply font-semibold text-sm;
+}
+
+/* Print styles */
+@media print {
+  .no-print {
+    display: none !important;
+  }
+  
+  .print-break {
+    page-break-before: always;
   }
 }
