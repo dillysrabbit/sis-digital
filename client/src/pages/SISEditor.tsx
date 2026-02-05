@@ -29,6 +29,9 @@ export default function SISEditor() {
 
   // Get API key
   const { data: apiKey, refetch: refetchApiKey } = trpc.settings.getFullApiKey.useQuery();
+  
+  // Get tRPC utils for PDF export
+  const utils = trpc.useUtils();
 
   // Mutations
   const createEntry = trpc.sis.create.useMutation({
@@ -127,38 +130,14 @@ export default function SISEditor() {
 
     setIsExporting(true);
     try {
-      // Use tRPC client to fetch HTML
-      const utils = trpc.useUtils();
-      const result = await utils.client.sis.exportPdfHtml.query({ id });
+      // Open PDF in new window using Express endpoint
+      const pdfUrl = `/api/pdf/export/${id}`;
+      const printWindow = window.open(pdfUrl, '_blank');
       
-      const { html, patientName } = result;
-      
-      // Open print dialog in new window
-      const printWindow = window.open('', '_blank');
       if (printWindow) {
-        printWindow.document.write(html);
-        printWindow.document.close();
-        
-        // Wait for content to load then trigger print
-        printWindow.onload = () => {
-          setTimeout(() => {
-            printWindow.print();
-          }, 250);
-        };
-        
-        toast.success("PDF-Export wird vorbereitet...");
+        toast.success("PDF-Export wird ge\u00f6ffnet...");
       } else {
-        // Fallback: Download as HTML file
-        const blob = new Blob([html], { type: 'text/html' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `SIS_${patientName.replace(/\s+/g, '_')}_${new Date().toISOString().split('T')[0]}.html`;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
-        toast.success("HTML-Datei heruntergeladen. Öffnen Sie diese und drucken Sie als PDF.");
+        toast.error("Pop-up wurde blockiert. Bitte erlauben Sie Pop-ups f\u00fcr diese Seite.");
       }
     } catch (error) {
       toast.error(`Export fehlgeschlagen: ${(error as Error).message}`);
