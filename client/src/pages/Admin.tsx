@@ -5,7 +5,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { trpc } from "@/lib/trpc";
 import { ArrowLeft, Loader2, RotateCcw, Save, Shield, AlertTriangle, Cpu, FileText, Check, ClipboardCheck, FileCheck } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { Link } from "wouter";
 import { toast } from "sonner";
 
@@ -16,11 +16,13 @@ export default function Admin() {
   const [planPrompt, setPlanPrompt] = useState("");
   const [planHasChanges, setPlanHasChanges] = useState(false);
   const [planSelectedModel, setPlanSelectedModel] = useState("");
+  const planInitialPromptRef = useRef<string | null>(null);
   
   // SIS-Prüfung states
   const [checkPrompt, setCheckPrompt] = useState("");
   const [checkHasChanges, setCheckHasChanges] = useState(false);
   const [checkSelectedModel, setCheckSelectedModel] = useState("");
+  const checkInitialPromptRef = useRef<string | null>(null);
 
   const { data: isAdmin, isLoading: isAdminLoading } = trpc.admin.isAdmin.useQuery(undefined, {
     enabled: !!user,
@@ -61,6 +63,8 @@ export default function Admin() {
     onSuccess: () => {
       toast.success("Maßnahmenplan-Prompt erfolgreich gespeichert");
       setPlanHasChanges(false);
+      // Aktualisiere den initialen Wert nach erfolgreichem Speichern
+      planInitialPromptRef.current = planPrompt;
     },
     onError: (error) => {
       toast.error(`Fehler beim Speichern: ${error.message}`);
@@ -71,6 +75,7 @@ export default function Admin() {
     onSuccess: (data) => {
       setPlanPrompt(data.prompt);
       setPlanHasChanges(false);
+      planInitialPromptRef.current = data.prompt;
       toast.success("Maßnahmenplan-Prompt auf Standard zurückgesetzt");
     },
     onError: (error) => {
@@ -90,8 +95,9 @@ export default function Admin() {
   const applyPlanTemplate = trpc.admin.applyTemplate.useMutation({
     onSuccess: (data) => {
       setPlanPrompt(data.prompt);
-      setPlanHasChanges(false);
-      toast.success("Vorlage erfolgreich angewendet");
+      // Vorlage angewendet = es gibt Änderungen zum Speichern
+      setPlanHasChanges(true);
+      toast.success("Vorlage angewendet - bitte speichern Sie die Änderungen");
     },
     onError: (error) => {
       toast.error(`Fehler beim Anwenden der Vorlage: ${error.message}`);
@@ -103,6 +109,8 @@ export default function Admin() {
     onSuccess: () => {
       toast.success("Prüfungs-Prompt erfolgreich gespeichert");
       setCheckHasChanges(false);
+      // Aktualisiere den initialen Wert nach erfolgreichem Speichern
+      checkInitialPromptRef.current = checkPrompt;
     },
     onError: (error) => {
       toast.error(`Fehler beim Speichern: ${error.message}`);
@@ -113,6 +121,7 @@ export default function Admin() {
     onSuccess: (data) => {
       setCheckPrompt(data.prompt);
       setCheckHasChanges(false);
+      checkInitialPromptRef.current = data.prompt;
       toast.success("Prüfungs-Prompt auf Standard zurückgesetzt");
     },
     onError: (error) => {
@@ -132,8 +141,9 @@ export default function Admin() {
   const applyCheckTemplate = trpc.admin.applyCheckTemplate.useMutation({
     onSuccess: (data) => {
       setCheckPrompt(data.prompt);
-      setCheckHasChanges(false);
-      toast.success("Vorlage erfolgreich angewendet");
+      // Vorlage angewendet = es gibt Änderungen zum Speichern
+      setCheckHasChanges(true);
+      toast.success("Vorlage angewendet - bitte speichern Sie die Änderungen");
     },
     onError: (error) => {
       toast.error(`Fehler beim Anwenden der Vorlage: ${error.message}`);
@@ -144,6 +154,10 @@ export default function Admin() {
   useEffect(() => {
     if (planSystemPrompt) {
       setPlanPrompt(planSystemPrompt);
+      // Speichere den initialen Wert nur beim ersten Laden
+      if (planInitialPromptRef.current === null) {
+        planInitialPromptRef.current = planSystemPrompt;
+      }
     }
   }, [planSystemPrompt]);
 
@@ -157,6 +171,10 @@ export default function Admin() {
   useEffect(() => {
     if (checkSystemPrompt) {
       setCheckPrompt(checkSystemPrompt);
+      // Speichere den initialen Wert nur beim ersten Laden
+      if (checkInitialPromptRef.current === null) {
+        checkInitialPromptRef.current = checkSystemPrompt;
+      }
     }
   }, [checkSystemPrompt]);
 
@@ -229,7 +247,8 @@ export default function Admin() {
   // Maßnahmenplan handlers
   const handlePlanPromptChange = (value: string) => {
     setPlanPrompt(value);
-    setPlanHasChanges(value !== planSystemPrompt);
+    // Vergleiche mit dem initialen Wert, nicht mit dem aktuellen aus der Query
+    setPlanHasChanges(value !== planInitialPromptRef.current);
   };
 
   const handlePlanSave = () => {
@@ -259,7 +278,8 @@ export default function Admin() {
   // SIS-Prüfung handlers
   const handleCheckPromptChange = (value: string) => {
     setCheckPrompt(value);
-    setCheckHasChanges(value !== checkSystemPrompt);
+    // Vergleiche mit dem initialen Wert, nicht mit dem aktuellen aus der Query
+    setCheckHasChanges(value !== checkInitialPromptRef.current);
   };
 
   const handleCheckSave = () => {
