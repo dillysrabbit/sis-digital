@@ -133,7 +133,8 @@ export default function SISEditor() {
     setIsExporting(true);
     try {
       // Open PDF in new window using Express endpoint
-      const pdfUrl = `/api/pdf/export/${id}`;
+      // Add timestamp to prevent caching
+      const pdfUrl = `/api/pdf/export/${id}?t=${Date.now()}`;
       const printWindow = window.open(pdfUrl, '_blank');
       
       if (printWindow) {

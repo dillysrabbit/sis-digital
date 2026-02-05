@@ -67,3 +67,4 @@
 - [x] Editierbares "Sonstiges"-Feld in der Risikomatrix
 - [x] Bearbeiten-Button für Maßnahmenplan
 - [x] Speicherfunktion für bearbeiteten Maßnahmenplan
+- [x] Bug: PDF-Export enthält nicht die aktuelle Version der SIS (Fix: Cache-Buster und no-cache Headers)
