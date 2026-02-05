@@ -57,3 +57,6 @@
 - [x] Frontend: Export-Button im SIS-Editor
 - [x] Frontend: Download-Funktion für generiertes PDF
 - [x] Tests für PDF-Export
+
+## Bugs
+- [x] Themenfelder-Inhalte verschwinden manchmal nach dem Speichern (Fix: useRef um nur beim initialen Laden zu synchronisieren)

@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -52,6 +52,13 @@ const defaultRiskMatrix: RiskMatrixData = {
 };
 
 export function SISForm({ initialData, onSave, onGeneratePlan, onCheckSis, isSaving, isGenerating, isChecking }: SISFormProps) {
+  // Track if initial data has been loaded to prevent overwriting user edits
+  const hasInitializedRef = useRef(false);
+  const initialDataIdRef = useRef<string | undefined>(undefined);
+  
+  // Create a stable ID from initialData to detect when we're loading a different entry
+  const currentDataId = initialData?.patientName ? `${initialData.patientName}-${initialData.birthDate || ''}` : undefined;
+
   const [formData, setFormData] = useState<SISFormData>({
     patientName: initialData?.patientName || "",
     birthDate: initialData?.birthDate || "",
@@ -68,25 +75,35 @@ export function SISForm({ initialData, onSave, onGeneratePlan, onCheckSis, isSav
     riskMatrix: initialData?.riskMatrix || defaultRiskMatrix,
   });
 
+  // Only update form data on initial load OR when loading a completely different entry
   useEffect(() => {
     if (initialData) {
-      setFormData({
-        patientName: initialData.patientName || "",
-        birthDate: initialData.birthDate || "",
-        conversationDate: initialData.conversationDate || new Date().toISOString().split("T")[0],
-        nurseSignature: initialData.nurseSignature || "",
-        relativeOrCaregiver: initialData.relativeOrCaregiver || "",
-        oTon: initialData.oTon || "",
-        themenfeld1: initialData.themenfeld1 || "",
-        themenfeld2: initialData.themenfeld2 || "",
-        themenfeld3: initialData.themenfeld3 || "",
-        themenfeld4: initialData.themenfeld4 || "",
-        themenfeld5: initialData.themenfeld5 || "",
-        themenfeld6: initialData.themenfeld6 || "",
-        riskMatrix: initialData.riskMatrix || defaultRiskMatrix,
-      });
+      // Only initialize if:
+      // 1. We haven't initialized yet, OR
+      // 2. We're loading a different entry (different patient)
+      const isNewEntry = initialDataIdRef.current !== currentDataId;
+      
+      if (!hasInitializedRef.current || isNewEntry) {
+        setFormData({
+          patientName: initialData.patientName || "",
+          birthDate: initialData.birthDate || "",
+          conversationDate: initialData.conversationDate || new Date().toISOString().split("T")[0],
+          nurseSignature: initialData.nurseSignature || "",
+          relativeOrCaregiver: initialData.relativeOrCaregiver || "",
+          oTon: initialData.oTon || "",
+          themenfeld1: initialData.themenfeld1 || "",
+          themenfeld2: initialData.themenfeld2 || "",
+          themenfeld3: initialData.themenfeld3 || "",
+          themenfeld4: initialData.themenfeld4 || "",
+          themenfeld5: initialData.themenfeld5 || "",
+          themenfeld6: initialData.themenfeld6 || "",
+          riskMatrix: initialData.riskMatrix || defaultRiskMatrix,
+        });
+        hasInitializedRef.current = true;
+        initialDataIdRef.current = currentDataId;
+      }
     }
-  }, [initialData]);
+  }, [initialData, currentDataId]);
 
   const updateField = (field: keyof SISFormData, value: string) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
