@@ -1,7 +1,7 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Copy, Share2, Check, FileText, ClipboardCheck } from "lucide-react";
+import { Copy, Share2, Check, FileText, ClipboardCheck, Edit } from "lucide-react";
 import { toast } from "sonner";
 import { Streamdown } from "streamdown";
 
@@ -11,6 +11,10 @@ interface MassnahmenplanDisplayProps {
   title?: string;
   emptyMessage?: string;
   icon?: string;
+  onEdit?: () => void;
+  onSave?: (newPlan: string) => void;
+  onCancel?: () => void;
+  isEditing?: boolean;
 }
 
 export function MassnahmenplanDisplay({ 
@@ -18,9 +22,18 @@ export function MassnahmenplanDisplay({
   patientName, 
   title = "Individueller Maßnahmenplan",
   emptyMessage = "Noch kein Maßnahmenplan generiert. Füllen Sie das SIS-Formular aus und klicken Sie auf 'Maßnahmenplan generieren'.",
-  icon = "📋"
+  icon = "📋",
+  onEdit,
+  onSave,
+  onCancel,
+  isEditing = false
 }: MassnahmenplanDisplayProps) {
   const [copied, setCopied] = useState(false);
+  const [editedPlan, setEditedPlan] = useState(plan);
+  
+  useEffect(() => {
+    setEditedPlan(plan);
+  }, [plan]);
 
   const handleCopy = async () => {
     try {
@@ -83,6 +96,17 @@ export function MassnahmenplanDisplay({
             {title}
           </CardTitle>
           <div className="flex gap-2">
+            {onEdit && (
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={onEdit}
+                className="gap-2 bg-white/20 hover:bg-white/30 text-white border-white/30"
+              >
+                <Edit className="h-4 w-4" />
+                Bearbeiten
+              </Button>
+            )}
             <Button
               variant="secondary"
               size="sm"
@@ -105,9 +129,36 @@ export function MassnahmenplanDisplay({
         </div>
       </CardHeader>
       <CardContent className="pt-6">
-        <div className="prose prose-sm max-w-none">
-          <Streamdown>{plan}</Streamdown>
-        </div>
+        {isEditing ? (
+          <div className="space-y-4">
+            <textarea
+              value={editedPlan}
+              onChange={(e) => setEditedPlan(e.target.value)}
+              className="w-full min-h-[400px] p-4 border rounded-md font-mono text-sm"
+            />
+            <div className="flex gap-2 justify-end">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setEditedPlan(plan);
+                  onCancel?.();
+                }}
+              >
+                Abbrechen
+              </Button>
+              <Button
+                onClick={() => onSave?.(editedPlan)}
+                className="bg-green-600 hover:bg-green-700"
+              >
+                Speichern
+              </Button>
+            </div>
+          </div>
+        ) : (
+          <div className="prose prose-sm max-w-none">
+            <Streamdown>{plan}</Streamdown>
+          </div>
+        )}
       </CardContent>
     </Card>
   );

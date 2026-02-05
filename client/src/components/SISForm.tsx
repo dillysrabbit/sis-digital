@@ -13,7 +13,7 @@ export interface RiskMatrixData {
   inkontinenz?: { tf1?: { ja: boolean; weitere: boolean }; tf2?: { ja: boolean; weitere: boolean }; tf3?: { ja: boolean; weitere: boolean }; tf4?: { ja: boolean; weitere: boolean }; tf5?: { ja: boolean; weitere: boolean } };
   schmerz?: { tf1?: { ja: boolean; weitere: boolean }; tf2?: { ja: boolean; weitere: boolean }; tf3?: { ja: boolean; weitere: boolean }; tf4?: { ja: boolean; weitere: boolean }; tf5?: { ja: boolean; weitere: boolean } };
   ernaehrung?: { tf1?: { ja: boolean; weitere: boolean }; tf2?: { ja: boolean; weitere: boolean }; tf3?: { ja: boolean; weitere: boolean }; tf4?: { ja: boolean; weitere: boolean }; tf5?: { ja: boolean; weitere: boolean } };
-  sonstiges?: { tf1?: { ja: boolean; weitere: boolean }; tf2?: { ja: boolean; weitere: boolean }; tf3?: { ja: boolean; weitere: boolean }; tf4?: { ja: boolean; weitere: boolean }; tf5?: { ja: boolean; weitere: boolean } };
+  sonstiges?: string;
 }
 
 export interface SISFormData {
@@ -48,7 +48,7 @@ const defaultRiskMatrix: RiskMatrixData = {
   inkontinenz: { tf1: { ja: false, weitere: false }, tf2: { ja: false, weitere: false }, tf3: { ja: false, weitere: false }, tf4: { ja: false, weitere: false }, tf5: { ja: false, weitere: false } },
   schmerz: { tf1: { ja: false, weitere: false }, tf2: { ja: false, weitere: false }, tf3: { ja: false, weitere: false }, tf4: { ja: false, weitere: false }, tf5: { ja: false, weitere: false } },
   ernaehrung: { tf1: { ja: false, weitere: false }, tf2: { ja: false, weitere: false }, tf3: { ja: false, weitere: false }, tf4: { ja: false, weitere: false }, tf5: { ja: false, weitere: false } },
-  sonstiges: { tf1: { ja: false, weitere: false }, tf2: { ja: false, weitere: false }, tf3: { ja: false, weitere: false }, tf4: { ja: false, weitere: false }, tf5: { ja: false, weitere: false } },
+  sonstiges: "",
 };
 
 export function SISForm({ initialData, onSave, onGeneratePlan, onCheckSis, isSaving, isGenerating, isChecking }: SISFormProps) {
@@ -115,19 +115,25 @@ export function SISForm({ initialData, onSave, onGeneratePlan, onCheckSis, isSav
     field: "ja" | "weitere",
     value: boolean
   ) => {
-    setFormData((prev) => ({
-      ...prev,
-      riskMatrix: {
-        ...prev.riskMatrix,
-        [risk]: {
-          ...prev.riskMatrix[risk],
-          [tf]: {
-            ...prev.riskMatrix[risk]?.[tf],
-            [field]: value,
+    setFormData((prev) => {
+      const currentRisk = prev.riskMatrix[risk];
+      // Skip if sonstiges (string type)
+      if (typeof currentRisk === 'string') return prev;
+      
+      return {
+        ...prev,
+        riskMatrix: {
+          ...prev.riskMatrix,
+          [risk]: {
+            ...currentRisk,
+            [tf]: {
+              ...(currentRisk as any)?.[tf],
+              [field]: value,
+            },
           },
         },
-      },
-    }));
+      };
+    });
   };
 
   const handleSave = () => {
@@ -149,7 +155,6 @@ export function SISForm({ initialData, onSave, onGeneratePlan, onCheckSis, isSav
     { key: "inkontinenz", label: "Inkontinenz", bgColor: "bg-blue-100" },
     { key: "schmerz", label: "Schmerz", bgColor: "bg-green-100" },
     { key: "ernaehrung", label: "Ernährung", bgColor: "bg-yellow-100" },
-    { key: "sonstiges", label: "Sonstiges", bgColor: "bg-gray-100" },
   ];
 
   const tfLabels = [
@@ -284,37 +289,51 @@ export function SISForm({ initialData, onSave, onGeneratePlan, onCheckSis, isSav
                 return (
                   <tr key={tfKey} className={index % 2 === 0 ? "bg-white" : "bg-gray-50"}>
                     <td className="border border-gray-300 p-2 font-medium text-sm">{label}</td>
-                    {risks.map((risk) => (
-                      <>
-                        <td key={`${risk.key}-${tfKey}-ja`} className="border border-gray-300 p-2 text-center">
-                          <div className="flex items-center justify-center gap-2">
-                            <Checkbox
-                              checked={formData.riskMatrix[risk.key as keyof RiskMatrixData]?.[tfKey]?.ja || false}
-                              onCheckedChange={(checked) =>
-                                updateRiskMatrix(risk.key as keyof RiskMatrixData, tfKey, "ja", checked as boolean)
-                              }
-                            />
-                            <span className="text-xs">ja</span>
-                          </div>
-                        </td>
-                        <td key={`${risk.key}-${tfKey}-weitere`} className="border border-gray-300 p-2 text-center">
-                          <div className="flex items-center justify-center gap-2">
-                            <Checkbox
-                              checked={formData.riskMatrix[risk.key as keyof RiskMatrixData]?.[tfKey]?.weitere || false}
-                              onCheckedChange={(checked) =>
-                                updateRiskMatrix(risk.key as keyof RiskMatrixData, tfKey, "weitere", checked as boolean)
-                              }
-                            />
-                            <span className="text-xs">ja</span>
-                          </div>
-                        </td>
-                      </>
-                    ))}
+                    {risks.map((risk) => {
+                      const riskData = formData.riskMatrix[risk.key as keyof RiskMatrixData];
+                      if (typeof riskData === 'string') return null; // Skip sonstiges
+                      return (
+                        <>
+                          <td key={`${risk.key}-${tfKey}-ja`} className="border border-gray-300 p-2 text-center">
+                            <div className="flex items-center justify-center gap-2">
+                              <Checkbox
+                                checked={riskData?.[tfKey]?.ja || false}
+                                onCheckedChange={(checked) =>
+                                  updateRiskMatrix(risk.key as keyof RiskMatrixData, tfKey, "ja", checked as boolean)
+                                }
+                              />
+                              <span className="text-xs">ja</span>
+                            </div>
+                          </td>
+                          <td key={`${risk.key}-${tfKey}-weitere`} className="border border-gray-300 p-2 text-center">
+                            <div className="flex items-center justify-center gap-2">
+                              <Checkbox
+                                checked={riskData?.[tfKey]?.weitere || false}
+                                onCheckedChange={(checked) =>
+                                  updateRiskMatrix(risk.key as keyof RiskMatrixData, tfKey, "weitere", checked as boolean)
+                                }
+                              />
+                              <span className="text-xs">ja</span>
+                            </div>
+                          </td>
+                        </>
+                      );
+                    })}
                   </tr>
                 );
               })}
             </tbody>
           </table>
+          <div className="mt-4">
+            <Label htmlFor="sonstiges">Sonstiges</Label>
+            <Textarea
+              id="sonstiges"
+              value={formData.riskMatrix.sonstiges || ""}
+              onChange={(e) => setFormData({ ...formData, riskMatrix: { ...formData.riskMatrix, sonstiges: e.target.value } })}
+              placeholder="Weitere Risiken oder Anmerkungen..."
+              className="min-h-[80px]"
+            />
+          </div>
         </CardContent>
       </Card>
 

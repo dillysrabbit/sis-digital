@@ -20,6 +20,8 @@ export default function SISEditor() {
   const [pruefungsergebnis, setPruefungsergebnis] = useState<string>("");
   const [activeTab, setActiveTab] = useState<string>("massnahmenplan");
   const [isExporting, setIsExporting] = useState(false);
+  const [isEditingPlan, setIsEditingPlan] = useState(false);
+  const [isEditingCheck, setIsEditingCheck] = useState(false);
 
   // Fetch existing entry if editing
   const { data: existingEntry, isLoading: isLoadingEntry } = trpc.sis.get.useQuery(
@@ -243,6 +245,17 @@ export default function SISEditor() {
                   <MassnahmenplanDisplay
                     plan={massnahmenplan}
                     patientName={existingEntry?.patientName || "Patient"}
+                    isEditing={isEditingPlan}
+                    onEdit={() => setIsEditingPlan(true)}
+                    onSave={async (newPlan) => {
+                      if (currentEntryId) {
+                        await updateEntry.mutateAsync({ id: currentEntryId, data: { massnahmenplan: newPlan } });
+                        setMassnahmenplan(newPlan);
+                        setIsEditingPlan(false);
+                        toast.success("Maßnahmenplan gespeichert");
+                      }
+                    }}
+                    onCancel={() => setIsEditingPlan(false)}
                   />
                 </TabsContent>
 
@@ -253,6 +266,17 @@ export default function SISEditor() {
                     title="SIS-Prüfungsergebnis"
                     emptyMessage="Noch keine Prüfung durchgeführt. Klicken Sie auf 'SIS prüfen', um eine Qualitätsprüfung der SIS durchzuführen."
                     icon="🔍"
+                    isEditing={isEditingCheck}
+                    onEdit={() => setIsEditingCheck(true)}
+                    onSave={async (newCheck) => {
+                      if (currentEntryId) {
+                        await updateEntry.mutateAsync({ id: currentEntryId, data: { pruefungsergebnis: newCheck } });
+                        setPruefungsergebnis(newCheck);
+                        setIsEditingCheck(false);
+                        toast.success("Prüfungsergebnis gespeichert");
+                      }
+                    }}
+                    onCancel={() => setIsEditingCheck(false)}
                   />
                 </TabsContent>
               </Tabs>

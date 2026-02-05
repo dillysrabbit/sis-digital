@@ -44,7 +44,7 @@ export const sisEntries = mysqlTable("sis_entries", {
   themenfeld6: text("themenfeld6"), // Wohnen/Häuslichkeit
   
   // Risikomatrix als JSON
-  // Format: { dekubitus: { tf1: {ja: bool, weitere: bool}, tf2: {...}, ... }, sturz: {...}, ... }
+  // Format: { dekubitus: { tf1: {ja: bool, weitere: bool}, tf2: {...}, ... }, sturz: {...}, sonstiges: string }
   riskMatrix: json("riskMatrix"),
   
   // Generierter Maßnahmenplan

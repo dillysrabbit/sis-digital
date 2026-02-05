@@ -62,3 +62,8 @@
 - [x] Themenfelder-Inhalte verschwinden manchmal nach dem Speichern (Fix: useRef um nur beim initialen Laden zu synchronisieren)
 - [x] Bug: Prompts können im Admin-Bereich nicht gespeichert werden (Fix: useRef für initiale Werte, Änderungserkennung verbessert)
 - [x] Bug: PDF-Export schlägt fehl (Fix: Express-Endpunkt statt tRPC für große HTML-Dokumente)
+
+## Neue Features
+- [x] Editierbares "Sonstiges"-Feld in der Risikomatrix
+- [x] Bearbeiten-Button für Maßnahmenplan
+- [x] Speicherfunktion für bearbeiteten Maßnahmenplan
