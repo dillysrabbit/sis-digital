@@ -171,7 +171,13 @@ export default function SISEditor() {
         themenfeld4: existingEntry.themenfeld4 || "",
         themenfeld5: existingEntry.themenfeld5 || "",
         themenfeld6: existingEntry.themenfeld6 || "",
-        riskMatrix: existingEntry.riskMatrix as any,
+        riskMatrix: {
+          ...existingEntry.riskMatrix as any,
+          // Ensure sonstiges is always a string, not an object
+          sonstiges: typeof (existingEntry.riskMatrix as any)?.sonstiges === 'string' 
+            ? (existingEntry.riskMatrix as any).sonstiges 
+            : ""
+        },
       }
     : undefined;
 
