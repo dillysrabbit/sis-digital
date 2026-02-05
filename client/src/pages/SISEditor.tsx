@@ -120,17 +120,18 @@ export default function SISEditor() {
       return;
     }
 
+    if (!existingEntry) {
+      toast.error("SIS-Eintrag nicht gefunden. Bitte laden Sie die Seite neu.");
+      return;
+    }
+
     setIsExporting(true);
     try {
-      // Fetch HTML from server
-      const response = await fetch(`/api/trpc/sis.exportPdfHtml?input=${encodeURIComponent(JSON.stringify({ id }))}`);
-      const data = await response.json();
+      // Use tRPC client to fetch HTML
+      const utils = trpc.useUtils();
+      const result = await utils.client.sis.exportPdfHtml.query({ id });
       
-      if (data.error) {
-        throw new Error(data.error.message || "Export fehlgeschlagen");
-      }
-      
-      const { html, patientName } = data.result.data;
+      const { html, patientName } = result;
       
       // Open print dialog in new window
       const printWindow = window.open('', '_blank');
@@ -212,7 +213,7 @@ export default function SISEditor() {
                 variant="outline" 
                 size="sm" 
                 onClick={handleExportPdf}
-                disabled={isExporting || !currentEntryId}
+                disabled={isExporting || !currentEntryId || !existingEntry}
                 className="gap-2"
               >
                 {isExporting ? (

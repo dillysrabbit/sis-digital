@@ -61,3 +61,4 @@
 ## Bugs
 - [x] Themenfelder-Inhalte verschwinden manchmal nach dem Speichern (Fix: useRef um nur beim initialen Laden zu synchronisieren)
 - [x] Bug: Prompts können im Admin-Bereich nicht gespeichert werden (Fix: useRef für initiale Werte, Änderungserkennung verbessert)
+- [x] Bug: PDF-Export schlägt fehl (Fix: tRPC-Client statt manuellen fetch verwenden)
