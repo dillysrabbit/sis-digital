@@ -220,7 +220,14 @@ const riskMatrixSchema = z.object({
     tf4: z.object({ ja: z.boolean(), weitere: z.boolean() }).optional(),
     tf5: z.object({ ja: z.boolean(), weitere: z.boolean() }).optional(),
   }).optional(),
-  sonstiges: z.string().optional(),
+  sonstiges: z.object({
+    title: z.string().optional(),
+    tf1: z.object({ ja: z.boolean(), weitere: z.boolean() }).optional(),
+    tf2: z.object({ ja: z.boolean(), weitere: z.boolean() }).optional(),
+    tf3: z.object({ ja: z.boolean(), weitere: z.boolean() }).optional(),
+    tf4: z.object({ ja: z.boolean(), weitere: z.boolean() }).optional(),
+    tf5: z.object({ ja: z.boolean(), weitere: z.boolean() }).optional(),
+  }).optional(),
 }).optional();
 
 // SIS Entry Schema

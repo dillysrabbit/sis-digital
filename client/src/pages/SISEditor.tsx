@@ -173,10 +173,17 @@ export default function SISEditor() {
         themenfeld6: existingEntry.themenfeld6 || "",
         riskMatrix: {
           ...existingEntry.riskMatrix as any,
-          // Ensure sonstiges is always a string, not an object
+          // Migrate old sonstiges format (string) to new format (object with title)
           sonstiges: typeof (existingEntry.riskMatrix as any)?.sonstiges === 'string' 
-            ? (existingEntry.riskMatrix as any).sonstiges 
-            : ""
+            ? { 
+                title: "Sonstiges", 
+                tf1: { ja: false, weitere: false }, 
+                tf2: { ja: false, weitere: false }, 
+                tf3: { ja: false, weitere: false }, 
+                tf4: { ja: false, weitere: false }, 
+                tf5: { ja: false, weitere: false } 
+              }
+            : (existingEntry.riskMatrix as any)?.sonstiges
         },
       }
     : undefined;

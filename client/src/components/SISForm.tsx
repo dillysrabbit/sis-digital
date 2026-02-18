@@ -7,13 +7,15 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Save, Sparkles, Loader2, ClipboardCheck } from "lucide-react";
 
+type RiskCheckboxes = { tf1?: { ja: boolean; weitere: boolean }; tf2?: { ja: boolean; weitere: boolean }; tf3?: { ja: boolean; weitere: boolean }; tf4?: { ja: boolean; weitere: boolean }; tf5?: { ja: boolean; weitere: boolean } };
+
 export interface RiskMatrixData {
-  dekubitus?: { tf1?: { ja: boolean; weitere: boolean }; tf2?: { ja: boolean; weitere: boolean }; tf3?: { ja: boolean; weitere: boolean }; tf4?: { ja: boolean; weitere: boolean }; tf5?: { ja: boolean; weitere: boolean } };
-  sturz?: { tf1?: { ja: boolean; weitere: boolean }; tf2?: { ja: boolean; weitere: boolean }; tf3?: { ja: boolean; weitere: boolean }; tf4?: { ja: boolean; weitere: boolean }; tf5?: { ja: boolean; weitere: boolean } };
-  inkontinenz?: { tf1?: { ja: boolean; weitere: boolean }; tf2?: { ja: boolean; weitere: boolean }; tf3?: { ja: boolean; weitere: boolean }; tf4?: { ja: boolean; weitere: boolean }; tf5?: { ja: boolean; weitere: boolean } };
-  schmerz?: { tf1?: { ja: boolean; weitere: boolean }; tf2?: { ja: boolean; weitere: boolean }; tf3?: { ja: boolean; weitere: boolean }; tf4?: { ja: boolean; weitere: boolean }; tf5?: { ja: boolean; weitere: boolean } };
-  ernaehrung?: { tf1?: { ja: boolean; weitere: boolean }; tf2?: { ja: boolean; weitere: boolean }; tf3?: { ja: boolean; weitere: boolean }; tf4?: { ja: boolean; weitere: boolean }; tf5?: { ja: boolean; weitere: boolean } };
-  sonstiges?: string;
+  dekubitus?: RiskCheckboxes;
+  sturz?: RiskCheckboxes;
+  inkontinenz?: RiskCheckboxes;
+  schmerz?: RiskCheckboxes;
+  ernaehrung?: RiskCheckboxes;
+  sonstiges?: { title?: string } & RiskCheckboxes;
 }
 
 export interface SISFormData {
@@ -48,7 +50,7 @@ const defaultRiskMatrix: RiskMatrixData = {
   inkontinenz: { tf1: { ja: false, weitere: false }, tf2: { ja: false, weitere: false }, tf3: { ja: false, weitere: false }, tf4: { ja: false, weitere: false }, tf5: { ja: false, weitere: false } },
   schmerz: { tf1: { ja: false, weitere: false }, tf2: { ja: false, weitere: false }, tf3: { ja: false, weitere: false }, tf4: { ja: false, weitere: false }, tf5: { ja: false, weitere: false } },
   ernaehrung: { tf1: { ja: false, weitere: false }, tf2: { ja: false, weitere: false }, tf3: { ja: false, weitere: false }, tf4: { ja: false, weitere: false }, tf5: { ja: false, weitere: false } },
-  sonstiges: "",
+  sonstiges: { title: "Sonstiges", tf1: { ja: false, weitere: false }, tf2: { ja: false, weitere: false }, tf3: { ja: false, weitere: false }, tf4: { ja: false, weitere: false }, tf5: { ja: false, weitere: false } },
 };
 
 export function SISForm({ initialData, onSave, onGeneratePlan, onCheckSis, isSaving, isGenerating, isChecking }: SISFormProps) {
@@ -99,6 +101,7 @@ export function SISForm({ initialData, onSave, onGeneratePlan, onCheckSis, isSav
           themenfeld6: initialData.themenfeld6 || "",
           riskMatrix: initialData.riskMatrix || defaultRiskMatrix,
         });
+        
         hasInitializedRef.current = true;
         initialDataIdRef.current = currentDataId;
       }
@@ -109,16 +112,9 @@ export function SISForm({ initialData, onSave, onGeneratePlan, onCheckSis, isSav
     setFormData((prev) => ({ ...prev, [field]: value }));
   };
 
-  const updateRiskMatrix = (
-    risk: keyof RiskMatrixData,
-    tf: "tf1" | "tf2" | "tf3" | "tf4" | "tf5",
-    field: "ja" | "weitere",
-    value: boolean
-  ) => {
+  const updateRiskMatrix = (risk: keyof RiskMatrixData, tf: "tf1" | "tf2" | "tf3" | "tf4" | "tf5", field: "ja" | "weitere", value: boolean) => {
     setFormData((prev) => {
       const currentRisk = prev.riskMatrix[risk];
-      // Skip if sonstiges (string type)
-      if (typeof currentRisk === 'string') return prev;
       
       return {
         ...prev,
@@ -134,6 +130,19 @@ export function SISForm({ initialData, onSave, onGeneratePlan, onCheckSis, isSav
         },
       };
     });
+  };
+
+  const updateSonstigesTitle = (title: string) => {
+    setFormData((prev) => ({
+      ...prev,
+      riskMatrix: {
+        ...prev.riskMatrix,
+        sonstiges: {
+          ...prev.riskMatrix.sonstiges,
+          title,
+        },
+      },
+    }));
   };
 
   const handleSave = () => {
@@ -155,6 +164,7 @@ export function SISForm({ initialData, onSave, onGeneratePlan, onCheckSis, isSav
     { key: "inkontinenz", label: "Inkontinenz", bgColor: "bg-blue-100" },
     { key: "schmerz", label: "Schmerz", bgColor: "bg-green-100" },
     { key: "ernaehrung", label: "Ernährung", bgColor: "bg-yellow-100" },
+    { key: "sonstiges", label: formData.riskMatrix.sonstiges?.title || "Sonstiges", bgColor: "bg-gray-100", editable: true },
   ];
 
   const tfLabels = [
@@ -167,22 +177,20 @@ export function SISForm({ initialData, onSave, onGeneratePlan, onCheckSis, isSav
 
   return (
     <div className="space-y-6">
-      {/* Header */}
+      {/* Kopfbereich - Stammdaten */}
       <Card>
-        <CardHeader className="bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-t-lg">
-          <CardTitle className="text-xl font-bold">
-            SIS® – stationär – Strukturierte Informationssammlung
-          </CardTitle>
+        <CardHeader className="bg-gray-100 rounded-t-lg">
+          <CardTitle className="text-base font-semibold">Stammdaten</CardTitle>
         </CardHeader>
-        <CardContent className="pt-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <CardContent className="pt-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <Label htmlFor="patientName">Name der pflegebedürftigen Person *</Label>
               <Input
                 id="patientName"
                 value={formData.patientName}
                 onChange={(e) => updateField("patientName", e.target.value)}
-                placeholder="Vor- und Nachname"
+                placeholder="Vollständiger Name"
                 required
               />
             </div>
@@ -274,7 +282,16 @@ export function SISForm({ initialData, onSave, onGeneratePlan, onCheckSis, isSav
                 <th className="border border-gray-300 p-2 bg-gray-50 text-left"></th>
                 {risks.map((risk) => (
                   <th key={risk.key} colSpan={2} className={`border border-gray-300 p-2 ${risk.bgColor} text-center`}>
-                    <span className="font-semibold">{risk.label}</span>
+                    {risk.editable ? (
+                      <Input
+                        value={formData.riskMatrix.sonstiges?.title || ""}
+                        onChange={(e) => updateSonstigesTitle(e.target.value)}
+                        placeholder="Risiko-Titel"
+                        className="font-semibold text-center bg-transparent border-none shadow-none h-6 px-1"
+                      />
+                    ) : (
+                      <span className="font-semibold">{risk.label}</span>
+                    )}
                     <div className="text-xs text-gray-600 mt-1">
                       <span className="inline-block w-12">ja/nein</span>
                       <span className="inline-block w-16">weitere Einsch.</span>
@@ -291,7 +308,6 @@ export function SISForm({ initialData, onSave, onGeneratePlan, onCheckSis, isSav
                     <td className="border border-gray-300 p-2 font-medium text-sm">{label}</td>
                     {risks.map((risk) => {
                       const riskData = formData.riskMatrix[risk.key as keyof RiskMatrixData];
-                      if (typeof riskData === 'string') return null; // Skip sonstiges
                       return (
                         <>
                           <td key={`${risk.key}-${tfKey}-ja`} className="border border-gray-300 p-2 text-center">
@@ -324,34 +340,24 @@ export function SISForm({ initialData, onSave, onGeneratePlan, onCheckSis, isSav
               })}
             </tbody>
           </table>
-          <div className="mt-4">
-            <Label htmlFor="sonstiges">Sonstiges</Label>
-            <Textarea
-              id="sonstiges"
-              value={formData.riskMatrix.sonstiges || ""}
-              onChange={(e) => setFormData({ ...formData, riskMatrix: { ...formData.riskMatrix, sonstiges: e.target.value } })}
-              placeholder="Weitere Risiken oder Anmerkungen..."
-              className="min-h-[80px]"
-            />
-          </div>
         </CardContent>
       </Card>
 
       {/* Action Buttons */}
-      <div className="flex flex-wrap gap-4 justify-end sticky bottom-4 bg-white/90 backdrop-blur-sm p-4 rounded-lg shadow-lg border">
-        <Button onClick={handleSave} disabled={isSaving || !formData.patientName} className="gap-2">
+      <div className="flex flex-wrap gap-3 justify-end">
+        <Button onClick={handleSave} disabled={isSaving || !formData.patientName} className="bg-blue-600 hover:bg-blue-700">
           {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-          Speichern
+          <span className="ml-2">Speichern</span>
         </Button>
         {onCheckSis && (
-          <Button onClick={onCheckSis} disabled={isChecking || !formData.patientName} variant="outline" className="gap-2 border-orange-500 text-orange-600 hover:bg-orange-50">
+          <Button onClick={onCheckSis} disabled={isChecking || !formData.patientName} className="bg-orange-600 hover:bg-orange-700">
             {isChecking ? <Loader2 className="h-4 w-4 animate-spin" /> : <ClipboardCheck className="h-4 w-4" />}
-            SIS prüfen
+            <span className="ml-2">SIS prüfen</span>
           </Button>
         )}
-        <Button onClick={onGeneratePlan} disabled={isGenerating || !formData.patientName} variant="default" className="gap-2 bg-green-600 hover:bg-green-700">
+        <Button onClick={onGeneratePlan} disabled={isGenerating || !formData.patientName} className="bg-green-600 hover:bg-green-700">
           {isGenerating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
-          Maßnahmenplan generieren
+          <span className="ml-2">Maßnahmenplan generieren</span>
         </Button>
       </div>
     </div>

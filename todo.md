@@ -69,3 +69,9 @@
 - [x] Speicherfunktion für bearbeiteten Maßnahmenplan
 - [x] Bug: PDF-Export enthält nicht die aktuelle Version der SIS (Fix: Cache-Buster und no-cache Headers)
 - [x] KRITISCH: Speichern der SIS schlägt fehl - invalid_type bei riskMatrix.sonstiges (Fix: Migration von alten Daten beim Laden)
+
+## Risikomatrix-Korrektur
+- [x] Sonstiges-Risiko als sechste Spalte mit editierbarem Titel
+- [x] Sonstiges-Risiko mit gleichen Checkboxen wie andere Risiken
+- [x] Datenbankschema für editierbaren Risiko-Titel anpassen
+- [x] UI als 6-spaltige Tabelle umbauen
