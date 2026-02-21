@@ -83,3 +83,4 @@
 - [x] Dropdown-Button in Themenfeldern zum Einfügen
 - [x] Kategorisierung nach Themenfeldern
 - [ ] Vordefinierte Standard-Bausteine (optional - kann vom Admin erstellt werden)
+- [x] Mobile Layout-Fix: Dialog scrollbar und Speichern-Button auf iPhone erreichbar

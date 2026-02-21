@@ -238,7 +238,7 @@ export default function TextBlocksAdmin() {
         )}
 
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-          <DialogContent className="max-w-2xl">
+          <DialogContent className="max-w-2xl max-h-[90vh] flex flex-col">
             <DialogHeader>
               <DialogTitle>
                 {editingBlock ? "Textbaustein bearbeiten" : "Neuer Textbaustein"}
@@ -247,7 +247,7 @@ export default function TextBlocksAdmin() {
                 Erstellen Sie einen wiederverwendbaren Textbaustein für die Themenfelder
               </DialogDescription>
             </DialogHeader>
-            <div className="grid gap-4 py-4">
+            <div className="grid gap-4 py-4 overflow-y-auto flex-1">
               <div className="grid gap-2">
                 <Label htmlFor="title">Titel</Label>
                 <Input
