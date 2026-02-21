@@ -93,3 +93,8 @@
 ## Vordefinierte Standard-Textbausteine
 - [x] Standard-Textbausteine für häufige Pflegesituationen erstellen
 - [x] Textbausteine in Datenbank einfügen (Mobilität, Ernährung, Körperpflege, etc.)
+
+## Textbausteine FAB (Floating Action Button)
+- [x] FAB-Komponente für Textbausteine mit Popover erstellen
+- [x] Sidepanel-Button durch FAB im Maßnahmenplan-Editor ersetzen
+- [x] Mobile-optimiertes Layout testen
