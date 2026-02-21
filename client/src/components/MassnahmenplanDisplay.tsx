@@ -1,9 +1,10 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Copy, Share2, Check, FileText, ClipboardCheck, Edit } from "lucide-react";
 import { toast } from "sonner";
 import { Streamdown } from "streamdown";
+import { TextBlockButton } from "./TextBlockButton";
 
 interface MassnahmenplanDisplayProps {
   plan: string;
@@ -30,6 +31,7 @@ export function MassnahmenplanDisplay({
 }: MassnahmenplanDisplayProps) {
   const [copied, setCopied] = useState(false);
   const [editedPlan, setEditedPlan] = useState(plan);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
   
   useEffect(() => {
     setEditedPlan(plan);
@@ -131,11 +133,30 @@ export function MassnahmenplanDisplay({
       <CardContent className="pt-6">
         {isEditing ? (
           <div className="space-y-4">
-            <textarea
-              value={editedPlan}
-              onChange={(e) => setEditedPlan(e.target.value)}
-              className="w-full min-h-[400px] p-4 border rounded-md font-mono text-sm"
-            />
+            <div className="flex items-start gap-2">
+              <textarea
+                ref={textareaRef}
+                value={editedPlan}
+                onChange={(e) => setEditedPlan(e.target.value)}
+                className="flex-1 min-h-[400px] p-4 border rounded-md font-mono text-sm"
+              />
+              <TextBlockButton
+                onSelect={(text: string) => {
+                  const textarea = textareaRef.current;
+                  if (textarea) {
+                    const start = textarea.selectionStart;
+                    const end = textarea.selectionEnd;
+                    const newText = editedPlan.substring(0, start) + text + editedPlan.substring(end);
+                    setEditedPlan(newText);
+                    // Set cursor position after inserted text
+                    setTimeout(() => {
+                      textarea.focus();
+                      textarea.setSelectionRange(start + text.length, start + text.length);
+                    }, 0);
+                  }
+                }}
+              />
+            </div>
             <div className="flex gap-2 justify-end">
               <Button
                 variant="outline"

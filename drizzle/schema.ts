@@ -97,14 +97,16 @@ export const textBlocks = mysqlTable("text_blocks", {
   title: varchar("title", { length: 255 }).notNull(),
   content: text("content").notNull(),
   category: mysqlEnum("category", [
-    "themenfeld1", // Kognitive und kommunikative Fähigkeiten
-    "themenfeld2", // Mobilität und Beweglichkeit
-    "themenfeld3", // Krankheitsbezogene Anforderungen
-    "themenfeld4", // Selbstversorgung
-    "themenfeld5", // Leben in sozialen Beziehungen
-    "themenfeld6", // Wohnen/Häuslichkeit
-    "oTon",        // O-Ton
-    "allgemein"    // Allgemein verwendbar
+    "mobilitaet",      // Mobilität und Bewegung
+    "ernaehrung",      // Ernährung und Flüssigkeit
+    "koerperpflege",   // Körperpflege und Hygiene
+    "ausscheidung",    // Ausscheidung
+    "kommunikation",   // Kommunikation und Kognition
+    "soziales",        // Soziale Beziehungen
+    "schmerz",         // Schmerzmanagement
+    "medikation",      // Medikation
+    "wundversorgung",  // Wundversorgung
+    "allgemein"        // Allgemein verwendbar
   ]).notNull(),
   isDefault: boolean("isDefault").default(false).notNull(), // Vordefinierte Bausteine
   createdAt: timestamp("createdAt").defaultNow().notNull(),

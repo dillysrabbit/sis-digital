@@ -84,3 +84,8 @@
 - [x] Kategorisierung nach Themenfeldern
 - [ ] Vordefinierte Standard-Bausteine (optional - kann vom Admin erstellt werden)
 - [x] Mobile Layout-Fix: Dialog scrollbar und Speichern-Button auf iPhone erreichbar
+
+## Textbausteine für Maßnahmenplan
+- [x] Kategorien von Themenfeldern zu Maßnahmenplan-Bereichen ändern (Mobilität, Ernährung, Körperpflege, etc.)
+- [x] Dropdown-Button im Maßnahmenplan-Editor zum Einfügen von Textbausteinen
+- [x] Textbausteine an Cursor-Position einfügen können

@@ -697,7 +697,7 @@ export const appRouter = router({
       .input(z.object({
         title: z.string().min(1),
         content: z.string().min(1),
-        category: z.enum(["themenfeld1", "themenfeld2", "themenfeld3", "themenfeld4", "themenfeld5", "themenfeld6", "oTon", "allgemein"]),
+        category: z.enum(["mobilitaet", "ernaehrung", "koerperpflege", "ausscheidung", "kommunikation", "soziales", "schmerz", "medikation", "wundversorgung", "allgemein"]),
         isDefault: z.boolean().optional(),
       }))
       .mutation(async ({ ctx, input }) => {
@@ -714,7 +714,7 @@ export const appRouter = router({
         id: z.number(),
         title: z.string().min(1).optional(),
         content: z.string().min(1).optional(),
-        category: z.enum(["themenfeld1", "themenfeld2", "themenfeld3", "themenfeld4", "themenfeld5", "themenfeld6", "oTon", "allgemein"]).optional(),
+        category: z.enum(["mobilitaet", "ernaehrung", "koerperpflege", "ausscheidung", "kommunikation", "soziales", "schmerz", "medikation", "wundversorgung", "allgemein"]).optional(),
       }))
       .mutation(async ({ ctx, input }) => {
         if (ctx.user.role !== "admin") {

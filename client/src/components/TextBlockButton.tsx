@@ -11,14 +11,24 @@ import { trpc } from "@/lib/trpc";
 import { FileText, Loader2 } from "lucide-react";
 
 interface TextBlockButtonProps {
-  category: string;
+  category?: string;
   onSelect: (content: string) => void;
 }
 
 export function TextBlockButton({ category, onSelect }: TextBlockButtonProps) {
-  const { data: textBlocks, isLoading } = trpc.textBlocks.byCategory.useQuery({ category });
+  const { data: textBlocks, isLoading } = trpc.textBlocks.list.useQuery(
+    undefined,
+    { enabled: !category }
+  );
+  const { data: categoryBlocks, isLoading: isCategoryLoading } = trpc.textBlocks.byCategory.useQuery(
+    { category: category! },
+    { enabled: !!category }
+  );
 
-  if (isLoading) {
+  const blocks = category ? categoryBlocks : textBlocks;
+  const loading = category ? isCategoryLoading : isLoading;
+
+  if (loading) {
     return (
       <Button variant="outline" size="sm" disabled>
         <Loader2 className="w-4 h-4 animate-spin" />
@@ -26,7 +36,7 @@ export function TextBlockButton({ category, onSelect }: TextBlockButtonProps) {
     );
   }
 
-  if (!textBlocks || textBlocks.length === 0) {
+  if (!blocks || blocks.length === 0) {
     return null;
   }
 
@@ -41,7 +51,7 @@ export function TextBlockButton({ category, onSelect }: TextBlockButtonProps) {
       <DropdownMenuContent align="end" className="w-64">
         <DropdownMenuLabel>Textbaustein einfügen</DropdownMenuLabel>
         <DropdownMenuSeparator />
-        {textBlocks.map((block) => (
+        {blocks.map((block) => (
           <DropdownMenuItem
             key={block.id}
             onClick={() => onSelect(block.content)}

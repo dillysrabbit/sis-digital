@@ -13,13 +13,15 @@ import { Link } from "wouter";
 import { toast } from "sonner";
 
 const CATEGORY_LABELS: Record<string, string> = {
-  themenfeld1: "Themenfeld 1 - Kognition/Kommunikation",
-  themenfeld2: "Themenfeld 2 - Mobilität",
-  themenfeld3: "Themenfeld 3 - Krankheitsbezogen",
-  themenfeld4: "Themenfeld 4 - Selbstversorgung",
-  themenfeld5: "Themenfeld 5 - Soziale Beziehungen",
-  themenfeld6: "Themenfeld 6 - Wohnen/Häuslichkeit",
-  oTon: "O-Ton",
+  mobilitaet: "Mobilität und Bewegung",
+  ernaehrung: "Ernährung und Flüssigkeit",
+  koerperpflege: "Körperpflege und Hygiene",
+  ausscheidung: "Ausscheidung",
+  kommunikation: "Kommunikation und Kognition",
+  soziales: "Soziale Beziehungen",
+  schmerz: "Schmerzmanagement",
+  medikation: "Medikation",
+  wundversorgung: "Wundversorgung",
   allgemein: "Allgemein",
 };
 

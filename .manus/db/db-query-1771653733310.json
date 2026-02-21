@@ -1,0 +1,9 @@
+{
+  "query": "ALTER TABLE `text_blocks` MODIFY COLUMN `category` enum('mobilitaet','ernaehrung','koerperpflege','ausscheidung','kommunikation','soziales','schmerz','medikation','wundversorgung','allgemein') NOT NULL;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user Guw1zSUGzxPuu8n.1ab5e0124a8d --database VnmR7u5tmyFFxNimaMZLHx --execute ALTER TABLE `text_blocks` MODIFY COLUMN `category` enum('mobilitaet','ernaehrung','koerperpflege','ausscheidung','kommunikation','soziales','schmerz','medikation','wundversorgung','allgemein') NOT NULL;",
+  "rows": [],
+  "messages": [],
+  "stdout": "",
+  "stderr": "",
+  "execution_time_ms": 829
+}
