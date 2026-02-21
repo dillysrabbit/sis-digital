@@ -89,3 +89,7 @@
 - [x] Kategorien von Themenfeldern zu Maßnahmenplan-Bereichen ändern (Mobilität, Ernährung, Körperpflege, etc.)
 - [x] Dropdown-Button im Maßnahmenplan-Editor zum Einfügen von Textbausteinen
 - [x] Textbausteine an Cursor-Position einfügen können
+
+## Vordefinierte Standard-Textbausteine
+- [x] Standard-Textbausteine für häufige Pflegesituationen erstellen
+- [x] Textbausteine in Datenbank einfügen (Mobilität, Ernährung, Körperpflege, etc.)
