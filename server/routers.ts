@@ -3,7 +3,7 @@ import { getSessionCookieOptions } from "./_core/cookies";
 import { systemRouter } from "./_core/systemRouter";
 import { publicProcedure, protectedProcedure, router } from "./_core/trpc";
 import { z } from "zod";
-import { createSisEntry, updateSisEntry, getSisEntry, listSisEntries, deleteSisEntry, getSetting, setSetting, getGlobalSetting, setGlobalSetting } from "./db";
+import { createSisEntry, updateSisEntry, getSisEntry, listSisEntries, deleteSisEntry, getSetting, setSetting, getGlobalSetting, setGlobalSetting, getAllTextBlocks, getTextBlocksByCategory, getTextBlockById, createTextBlock, updateTextBlock, deleteTextBlock } from "./db";
 import { TRPCError } from "@trpc/server";
 import { generateSisPdfHtml } from "./pdfGenerator";
 
@@ -663,6 +663,77 @@ export const appRouter = router({
         }
         await setGlobalSetting("check_system_prompt", template.prompt);
         return { success: true, prompt: template.prompt };
+      }),
+  }),
+
+  // Textbausteine Router
+  textBlocks: router({
+    // Liste aller Textbausteine
+    list: protectedProcedure
+      .query(async () => {
+        return await getAllTextBlocks();
+      }),
+
+    // Textbausteine nach Kategorie filtern
+    byCategory: protectedProcedure
+      .input(z.object({ category: z.string() }))
+      .query(async ({ input }) => {
+        return await getTextBlocksByCategory(input.category);
+      }),
+
+    // Einzelnen Textbaustein abrufen
+    get: protectedProcedure
+      .input(z.object({ id: z.number() }))
+      .query(async ({ input }) => {
+        const block = await getTextBlockById(input.id);
+        if (!block) {
+          throw new TRPCError({ code: "NOT_FOUND", message: "Textbaustein nicht gefunden" });
+        }
+        return block;
+      }),
+
+    // Neuen Textbaustein erstellen (nur Admin)
+    create: protectedProcedure
+      .input(z.object({
+        title: z.string().min(1),
+        content: z.string().min(1),
+        category: z.enum(["themenfeld1", "themenfeld2", "themenfeld3", "themenfeld4", "themenfeld5", "themenfeld6", "oTon", "allgemein"]),
+        isDefault: z.boolean().optional(),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        if (ctx.user.role !== "admin") {
+          throw new TRPCError({ code: "FORBIDDEN", message: "Nur Administratoren können Textbausteine erstellen" });
+        }
+        const id = await createTextBlock(input);
+        return { success: true, id };
+      }),
+
+    // Textbaustein aktualisieren (nur Admin)
+    update: protectedProcedure
+      .input(z.object({
+        id: z.number(),
+        title: z.string().min(1).optional(),
+        content: z.string().min(1).optional(),
+        category: z.enum(["themenfeld1", "themenfeld2", "themenfeld3", "themenfeld4", "themenfeld5", "themenfeld6", "oTon", "allgemein"]).optional(),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        if (ctx.user.role !== "admin") {
+          throw new TRPCError({ code: "FORBIDDEN", message: "Nur Administratoren können Textbausteine bearbeiten" });
+        }
+        const { id, ...data } = input;
+        await updateTextBlock(id, data);
+        return { success: true };
+      }),
+
+    // Textbaustein löschen (nur Admin)
+    delete: protectedProcedure
+      .input(z.object({ id: z.number() }))
+      .mutation(async ({ ctx, input }) => {
+        if (ctx.user.role !== "admin") {
+          throw new TRPCError({ code: "FORBIDDEN", message: "Nur Administratoren können Textbausteine löschen" });
+        }
+        await deleteTextBlock(input.id);
+        return { success: true };
       }),
   }),
 });

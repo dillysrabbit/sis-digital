@@ -7,6 +7,7 @@ import { ThemeProvider } from "./contexts/ThemeContext";
 import Home from "./pages/Home";
 import SISEditor from "./pages/SISEditor";
 import Admin from "./pages/Admin";
+import TextBlocksAdmin from "./pages/TextBlocksAdmin";
 
 function Router() {
   return (
@@ -15,6 +16,7 @@ function Router() {
       <Route path="/sis/new" component={SISEditor} />
       <Route path="/sis/:id" component={SISEditor} />
       <Route path="/admin" component={Admin} />
+      <Route path="/admin/textblocks" component={TextBlocksAdmin} />
       <Route path="/404" component={NotFound} />
       <Route component={NotFound} />
     </Switch>

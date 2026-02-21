@@ -88,3 +88,28 @@ export const globalSettings = mysqlTable("global_settings", {
 
 export type GlobalSetting = typeof globalSettings.$inferSelect;
 export type InsertGlobalSetting = typeof globalSettings.$inferInsert;
+
+/**
+ * Textbausteine für Themenfelder
+ */
+export const textBlocks = mysqlTable("text_blocks", {
+  id: int("id").autoincrement().primaryKey(),
+  title: varchar("title", { length: 255 }).notNull(),
+  content: text("content").notNull(),
+  category: mysqlEnum("category", [
+    "themenfeld1", // Kognitive und kommunikative Fähigkeiten
+    "themenfeld2", // Mobilität und Beweglichkeit
+    "themenfeld3", // Krankheitsbezogene Anforderungen
+    "themenfeld4", // Selbstversorgung
+    "themenfeld5", // Leben in sozialen Beziehungen
+    "themenfeld6", // Wohnen/Häuslichkeit
+    "oTon",        // O-Ton
+    "allgemein"    // Allgemein verwendbar
+  ]).notNull(),
+  isDefault: boolean("isDefault").default(false).notNull(), // Vordefinierte Bausteine
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type TextBlock = typeof textBlocks.$inferSelect;
+export type InsertTextBlock = typeof textBlocks.$inferInsert;

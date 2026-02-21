@@ -6,6 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Save, Sparkles, Loader2, ClipboardCheck } from "lucide-react";
+import { TextBlockButton } from "./TextBlockButton";
 
 type RiskCheckboxes = { tf1?: { ja: boolean; weitere: boolean }; tf2?: { ja: boolean; weitere: boolean }; tf3?: { ja: boolean; weitere: boolean }; tf4?: { ja: boolean; weitere: boolean }; tf5?: { ja: boolean; weitere: boolean } };
 
@@ -241,14 +242,20 @@ export function SISForm({ initialData, onSave, onGeneratePlan, onCheckSis, isSav
             Was bewegt Sie im Augenblick? Was brauchen Sie? Was können wir für Sie tun?
           </CardTitle>
         </CardHeader>
-        <CardContent className="pt-4">
-          <Textarea
-            value={formData.oTon}
-            onChange={(e) => updateField("oTon", e.target.value)}
-            placeholder="Erfassen Sie hier die Perspektive und Wünsche der pflegebedürftigen Person in deren eigenen Worten..."
-            className="min-h-[150px]"
-          />
-        </CardContent>
+          <CardContent className="pt-4 space-y-2">
+            <div className="flex justify-end">
+              <TextBlockButton
+                category="oTon"
+                onSelect={(content) => updateField("oTon", formData.oTon + (formData.oTon ? "\n\n" : "") + content)}
+              />
+            </div>
+            <Textarea
+              value={formData.oTon}
+              onChange={(e) => updateField("oTon", e.target.value)}
+              placeholder="Erfassen Sie hier die Perspektive und Wünsche der pflegebedürftigen Person in deren eigenen Worten..."
+              className="min-h-[150px]"
+            />
+          </CardContent>
       </Card>
 
       {/* Themenfelder */}
@@ -257,7 +264,16 @@ export function SISForm({ initialData, onSave, onGeneratePlan, onCheckSis, isSav
           <CardHeader className={`${tf.color} ${tf.textColor} rounded-t-lg py-3`}>
             <CardTitle className="text-base font-semibold">{tf.label}</CardTitle>
           </CardHeader>
-          <CardContent className="pt-4">
+          <CardContent className="pt-4 space-y-2">
+            <div className="flex justify-end">
+              <TextBlockButton
+                category={tf.key}
+                onSelect={(content) => {
+                  const currentValue = formData[tf.key as keyof SISFormData] as string;
+                  updateField(tf.key as keyof SISFormData, currentValue + (currentValue ? "\n\n" : "") + content);
+                }}
+              />
+            </div>
             <Textarea
               value={formData[tf.key as keyof SISFormData] as string}
               onChange={(e) => updateField(tf.key as keyof SISFormData, e.target.value)}

@@ -75,3 +75,11 @@
 - [x] Sonstiges-Risiko mit gleichen Checkboxen wie andere Risiken
 - [x] Datenbankschema für editierbaren Risiko-Titel anpassen
 - [x] UI als 6-spaltige Tabelle umbauen
+
+## Textbausteine-System
+- [x] Datenbankschema für Textbausteine erstellen
+- [x] Backend-API für Textbausteine-Verwaltung (CRUD)
+- [x] Admin-Seite für Textbausteine-Verwaltung
+- [x] Dropdown-Button in Themenfeldern zum Einfügen
+- [x] Kategorisierung nach Themenfeldern
+- [ ] Vordefinierte Standard-Bausteine (optional - kann vom Admin erstellt werden)

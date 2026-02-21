@@ -325,6 +325,12 @@ export default function Admin() {
               </div>
             </div>
             <div className="flex items-center gap-2">
+              <Link href="/admin/textblocks">
+                <Button variant="outline" size="sm">
+                  <FileText className="mr-2 h-4 w-4" />
+                  Textbausteine
+                </Button>
+              </Link>
               <span className="text-sm text-gray-500">
                 Angemeldet als <strong>{user.name}</strong>
               </span>

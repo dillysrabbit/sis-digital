@@ -1,6 +1,6 @@
 import { eq, and, desc } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
-import { InsertUser, users, sisEntries, InsertSisEntry, SisEntry, appSettings, InsertAppSetting, globalSettings } from "../drizzle/schema";
+import { InsertUser, users, sisEntries, InsertSisEntry, SisEntry, appSettings, InsertAppSetting, globalSettings, textBlocks, InsertTextBlock, TextBlock } from "../drizzle/schema";
 import { ENV } from './_core/env';
 
 let _db: ReturnType<typeof drizzle> | null = null;
@@ -203,4 +203,61 @@ export async function setGlobalSetting(key: string, value: string): Promise<void
       settingValue: value,
     });
   }
+}
+
+// Textbausteine functions
+export async function getAllTextBlocks(): Promise<TextBlock[]> {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  return await db.select()
+    .from(textBlocks)
+    .orderBy(desc(textBlocks.createdAt));
+}
+
+export async function getTextBlocksByCategory(category: string): Promise<TextBlock[]> {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  return await db.select()
+    .from(textBlocks)
+    .where(eq(textBlocks.category, category as any))
+    .orderBy(desc(textBlocks.createdAt));
+}
+
+export async function getTextBlockById(id: number): Promise<TextBlock | undefined> {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  const result = await db.select()
+    .from(textBlocks)
+    .where(eq(textBlocks.id, id))
+    .limit(1);
+  
+  return result.length > 0 ? result[0] : undefined;
+}
+
+export async function createTextBlock(data: InsertTextBlock): Promise<number> {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  const result = await db.insert(textBlocks).values(data);
+  return result[0].insertId;
+}
+
+export async function updateTextBlock(id: number, data: Partial<InsertTextBlock>): Promise<void> {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  await db.update(textBlocks)
+    .set(data)
+    .where(eq(textBlocks.id, id));
+}
+
+export async function deleteTextBlock(id: number): Promise<void> {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  await db.delete(textBlocks)
+    .where(eq(textBlocks.id, id));
 }
