@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -325,8 +325,8 @@ export function SISForm({ initialData, onSave, onGeneratePlan, onCheckSis, isSav
                     {risks.map((risk) => {
                       const riskData = formData.riskMatrix[risk.key as keyof RiskMatrixData];
                       return (
-                        <>
-                          <td key={`${risk.key}-${tfKey}-ja`} className="border border-gray-300 p-2 text-center">
+                        <React.Fragment key={`${risk.key}-${tfKey}`}>
+                          <td className="border border-gray-300 p-2 text-center">
                             <div className="flex items-center justify-center gap-2">
                               <Checkbox
                                 checked={riskData?.[tfKey]?.ja || false}
@@ -348,7 +348,7 @@ export function SISForm({ initialData, onSave, onGeneratePlan, onCheckSis, isSav
                               <span className="text-xs">ja</span>
                             </div>
                           </td>
-                        </>
+                        </React.Fragment>
                       );
                     })}
                   </tr>

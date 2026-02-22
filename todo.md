@@ -104,3 +104,6 @@
 - [x] Backend-Logik für automatisches Speichern von Versionen
 - [x] Frontend-UI für Verlaufsanzeige und Wiederherstellung
 - [x] Vergleichsansicht für verschiedene Versionen
+
+## Bugfixes
+- [x] React-Key-Fehler in SISForm Risikomatrix beheben
