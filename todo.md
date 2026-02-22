@@ -107,3 +107,7 @@
 
 ## Bugfixes
 - [x] React-Key-Fehler in SISForm Risikomatrix beheben
+
+## Layout-Verbesserung
+- [x] SIS-Editor Layout von Sidepanel zu vertikaler Anordnung ändern
+- [x] SIS-Formular oben, Maßnahmenplan/Prüfung-Tabs darunter

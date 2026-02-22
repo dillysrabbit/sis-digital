@@ -226,9 +226,9 @@ export default function SISEditor() {
 
       {/* Main Content */}
       <main className="container py-6">
-        <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
+        <div className="space-y-6">
           {/* SIS Form */}
-          <div className="xl:col-span-2">
+          <div>
             <SISForm
               initialData={initialData}
               onSave={handleSave}
@@ -241,8 +241,8 @@ export default function SISEditor() {
           </div>
 
           {/* Results Panel */}
-          <div className="xl:col-span-1">
-            <div className="sticky top-24">
+          <div>
+            <div>
               <Tabs value={activeTab} onValueChange={setActiveTab}>
                 <TabsList className="grid w-full grid-cols-2 mb-4">
                   <TabsTrigger value="massnahmenplan" className="flex items-center gap-2">
