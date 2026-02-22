@@ -1,6 +1,6 @@
 import { eq, and, desc } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
-import { InsertUser, users, sisEntries, InsertSisEntry, SisEntry, appSettings, InsertAppSetting, globalSettings, textBlocks, InsertTextBlock, TextBlock } from "../drizzle/schema";
+import { InsertUser, users, sisEntries, InsertSisEntry, SisEntry, appSettings, InsertAppSetting, globalSettings, textBlocks, InsertTextBlock, TextBlock, planVersions, InsertPlanVersion, PlanVersion } from "../drizzle/schema";
 import { ENV } from './_core/env';
 
 let _db: ReturnType<typeof drizzle> | null = null;
@@ -260,4 +260,68 @@ export async function deleteTextBlock(id: number): Promise<void> {
   
   await db.delete(textBlocks)
     .where(eq(textBlocks.id, id));
+}
+
+// ============================================
+// Maßnahmenplan-Versionen
+// ============================================
+
+/**
+ * Speichert eine neue Version des Maßnahmenplans
+ */
+export async function savePlanVersion(data: {
+  sisEntryId: number;
+  content: string;
+  createdBy: number;
+}): Promise<number> {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  // Ermittle die nächste Versionsnummer
+  const existingVersions = await db
+    .select()
+    .from(planVersions)
+    .where(eq(planVersions.sisEntryId, data.sisEntryId))
+    .orderBy(desc(planVersions.versionNumber));
+
+  const nextVersion = existingVersions.length > 0 ? existingVersions[0].versionNumber + 1 : 1;
+
+  const [result] = await db.insert(planVersions).values({
+    sisEntryId: data.sisEntryId,
+    content: data.content,
+    versionNumber: nextVersion,
+    createdBy: data.createdBy,
+  });
+
+  return result.insertId;
+}
+
+/**
+ * Holt alle Versionen eines Maßnahmenplans
+ */
+export async function getPlanVersions(sisEntryId: number): Promise<PlanVersion[]> {
+  const db = await getDb();
+  if (!db) return [];
+
+  return db
+    .select()
+    .from(planVersions)
+    .where(eq(planVersions.sisEntryId, sisEntryId))
+    .orderBy(desc(planVersions.createdAt));
+}
+
+/**
+ * Holt eine spezifische Version
+ */
+export async function getPlanVersion(versionId: number): Promise<PlanVersion | null> {
+  const db = await getDb();
+  if (!db) return null;
+
+  const results = await db
+    .select()
+    .from(planVersions)
+    .where(eq(planVersions.id, versionId))
+    .limit(1);
+
+  return results[0] || null;
 }

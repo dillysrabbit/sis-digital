@@ -24,7 +24,7 @@ export default function SISEditor() {
   const [isEditingCheck, setIsEditingCheck] = useState(false);
 
   // Fetch existing entry if editing
-  const { data: existingEntry, isLoading: isLoadingEntry } = trpc.sis.get.useQuery(
+  const { data: existingEntry, isLoading: isLoadingEntry, refetch: refetchEntry } = trpc.sis.get.useQuery(
     { id: entryId! },
     { enabled: !!entryId }
   );
@@ -259,6 +259,7 @@ export default function SISEditor() {
                   <MassnahmenplanDisplay
                     plan={massnahmenplan}
                     patientName={existingEntry?.patientName || "Patient"}
+                    sisEntryId={currentEntryId || undefined}
                     isEditing={isEditingPlan}
                     onEdit={() => setIsEditingPlan(true)}
                     onSave={async (newPlan) => {
@@ -270,6 +271,11 @@ export default function SISEditor() {
                       }
                     }}
                     onCancel={() => setIsEditingPlan(false)}
+                    onVersionRestore={() => {
+                      if (currentEntryId) {
+                        refetchEntry();
+                      }
+                    }}
                   />
                 </TabsContent>
 

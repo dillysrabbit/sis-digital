@@ -98,3 +98,9 @@
 - [x] FAB-Komponente für Textbausteine mit Popover erstellen
 - [x] Sidepanel-Button durch FAB im Maßnahmenplan-Editor ersetzen
 - [x] Mobile-optimiertes Layout testen
+
+## Verlaufs-Funktion für Maßnahmenpläne
+- [x] Datenbankschema für Maßnahmenplan-Versionen erstellen
+- [x] Backend-Logik für automatisches Speichern von Versionen
+- [x] Frontend-UI für Verlaufsanzeige und Wiederherstellung
+- [x] Vergleichsansicht für verschiedene Versionen

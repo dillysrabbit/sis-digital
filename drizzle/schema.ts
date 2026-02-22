@@ -115,3 +115,18 @@ export const textBlocks = mysqlTable("text_blocks", {
 
 export type TextBlock = typeof textBlocks.$inferSelect;
 export type InsertTextBlock = typeof textBlocks.$inferInsert;
+
+/**
+ * Versionshistorie für Maßnahmenpläne
+ */
+export const planVersions = mysqlTable("plan_versions", {
+  id: int("id").autoincrement().primaryKey(),
+  sisEntryId: int("sisEntryId").notNull(), // Referenz zum SIS-Eintrag
+  content: text("content").notNull(), // Inhalt des Maßnahmenplans
+  versionNumber: int("versionNumber").notNull(), // Versionsnummer (1, 2, 3, ...)
+  createdBy: int("createdBy").notNull(), // User ID
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type PlanVersion = typeof planVersions.$inferSelect;
+export type InsertPlanVersion = typeof planVersions.$inferInsert;

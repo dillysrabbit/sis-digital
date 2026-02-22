@@ -3,7 +3,7 @@ import { getSessionCookieOptions } from "./_core/cookies";
 import { systemRouter } from "./_core/systemRouter";
 import { publicProcedure, protectedProcedure, router } from "./_core/trpc";
 import { z } from "zod";
-import { createSisEntry, updateSisEntry, getSisEntry, listSisEntries, deleteSisEntry, getSetting, setSetting, getGlobalSetting, setGlobalSetting, getAllTextBlocks, getTextBlocksByCategory, getTextBlockById, createTextBlock, updateTextBlock, deleteTextBlock } from "./db";
+import { createSisEntry, updateSisEntry, getSisEntry, listSisEntries, deleteSisEntry, getSetting, setSetting, getGlobalSetting, setGlobalSetting, getAllTextBlocks, getTextBlocksByCategory, getTextBlockById, createTextBlock, updateTextBlock, deleteTextBlock, savePlanVersion, getPlanVersions, getPlanVersion } from "./db";
 import { TRPCError } from "@trpc/server";
 import { generateSisPdfHtml } from "./pdfGenerator";
 
@@ -384,6 +384,13 @@ export const appRouter = router({
         // Save the generated plan
         await updateSisEntry(input.id, ctx.user.id, { massnahmenplan: plan });
 
+        // Save version history
+        await savePlanVersion({
+          sisEntryId: input.id,
+          content: plan,
+          createdBy: ctx.user.id,
+        });
+
         return { plan };
       }),
 
@@ -733,6 +740,64 @@ export const appRouter = router({
           throw new TRPCError({ code: "FORBIDDEN", message: "Nur Administratoren können Textbausteine löschen" });
         }
         await deleteTextBlock(input.id);
+        return { success: true };
+      }),
+  }),
+
+  // Maßnahmenplan-Versionen
+  planVersions: router({
+    // Alle Versionen eines Maßnahmenplans abrufen
+    list: protectedProcedure
+      .input(z.object({ sisEntryId: z.number() }))
+      .query(async ({ ctx, input }) => {
+        const entry = await getSisEntry(input.sisEntryId, ctx.user.id);
+        if (!entry) {
+          throw new TRPCError({ code: "NOT_FOUND", message: "SIS-Eintrag nicht gefunden" });
+        }
+        return await getPlanVersions(input.sisEntryId);
+      }),
+
+    // Spezifische Version abrufen
+    get: protectedProcedure
+      .input(z.object({ versionId: z.number() }))
+      .query(async ({ ctx, input }) => {
+        const version = await getPlanVersion(input.versionId);
+        if (!version) {
+          throw new TRPCError({ code: "NOT_FOUND", message: "Version nicht gefunden" });
+        }
+        // Prüfe ob User Zugriff auf den SIS-Eintrag hat
+        const entry = await getSisEntry(version.sisEntryId, ctx.user.id);
+        if (!entry) {
+          throw new TRPCError({ code: "FORBIDDEN", message: "Kein Zugriff auf diese Version" });
+        }
+        return version;
+      }),
+
+    // Version wiederherstellen
+    restore: protectedProcedure
+      .input(z.object({ versionId: z.number() }))
+      .mutation(async ({ ctx, input }) => {
+        const version = await getPlanVersion(input.versionId);
+        if (!version) {
+          throw new TRPCError({ code: "NOT_FOUND", message: "Version nicht gefunden" });
+        }
+        
+        // Prüfe Zugriff
+        const entry = await getSisEntry(version.sisEntryId, ctx.user.id);
+        if (!entry) {
+          throw new TRPCError({ code: "FORBIDDEN", message: "Kein Zugriff" });
+        }
+
+        // Aktualisiere den Maßnahmenplan mit der alten Version
+        await updateSisEntry(version.sisEntryId, ctx.user.id, { massnahmenplan: version.content });
+
+        // Speichere die Wiederherstellung als neue Version
+        await savePlanVersion({
+          sisEntryId: version.sisEntryId,
+          content: version.content,
+          createdBy: ctx.user.id,
+        });
+
         return { success: true };
       }),
   }),

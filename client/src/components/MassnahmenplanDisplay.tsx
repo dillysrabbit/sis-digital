@@ -5,6 +5,7 @@ import { Copy, Share2, Check, FileText, ClipboardCheck, Edit } from "lucide-reac
 import { toast } from "sonner";
 import { Streamdown } from "streamdown";
 import { TextBlockFAB } from "./TextBlockFAB";
+import { PlanVersionHistory } from "./PlanVersionHistory";
 
 interface MassnahmenplanDisplayProps {
   plan: string;
@@ -12,9 +13,11 @@ interface MassnahmenplanDisplayProps {
   title?: string;
   emptyMessage?: string;
   icon?: string;
+  sisEntryId?: number;
   onEdit?: () => void;
   onSave?: (newPlan: string) => void;
   onCancel?: () => void;
+  onVersionRestore?: () => void;
   isEditing?: boolean;
 }
 
@@ -24,9 +27,11 @@ export function MassnahmenplanDisplay({
   title = "Individueller Maßnahmenplan",
   emptyMessage = "Noch kein Maßnahmenplan generiert. Füllen Sie das SIS-Formular aus und klicken Sie auf 'Maßnahmenplan generieren'.",
   icon = "📋",
+  sisEntryId,
   onEdit,
   onSave,
   onCancel,
+  onVersionRestore,
   isEditing = false
 }: MassnahmenplanDisplayProps) {
   const [copied, setCopied] = useState(false);
@@ -98,6 +103,12 @@ export function MassnahmenplanDisplay({
             {title}
           </CardTitle>
           <div className="flex gap-2">
+            {sisEntryId && (
+              <PlanVersionHistory
+                sisEntryId={sisEntryId}
+                onRestore={onVersionRestore}
+              />
+            )}
             {onEdit && (
               <Button
                 variant="secondary"
