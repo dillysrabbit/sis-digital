@@ -32,6 +32,10 @@ export const sisEntries = mysqlTable("sis_entries", {
   nurseSignature: varchar("nurseSignature", { length: 255 }),
   relativeOrCaregiver: varchar("relativeOrCaregiver", { length: 255 }),
   
+  // Pflegerelevante Diagnosen (als JSON-Array)
+  // Format: [{ diagnose: string, auswirkungen: string }, ...]
+  diagnosen: json("diagnosen"),
+  
   // Feld A - O-Ton
   oTon: text("oTon"),
   

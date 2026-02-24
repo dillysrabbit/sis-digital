@@ -237,6 +237,10 @@ const sisEntryInputSchema = z.object({
   conversationDate: z.string().optional(),
   nurseSignature: z.string().optional(),
   relativeOrCaregiver: z.string().optional(),
+  diagnosen: z.array(z.object({
+    diagnose: z.string(),
+    auswirkungen: z.string(),
+  })).optional(),
   oTon: z.string().optional(),
   themenfeld1: z.string().optional(),
   themenfeld2: z.string().optional(),

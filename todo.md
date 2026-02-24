@@ -116,3 +116,9 @@
 - [x] Druckansicht-Komponente mit optimiertem Layout erstellen
 - [x] Route für Druckansicht hinzufügen
 - [x] Drucken-Button im Maßnahmenplan-Editor
+
+## Pflegerelevante Diagnosen
+- [x] Datenbankschema für Diagnosen erweitern
+- [x] Backend-Endpunkte für Diagnosen erstellen
+- [x] Eingabe-Maske zwischen Stammdaten und O-Ton einfügen
+- [ ] Diagnosen in PDF-Export integrieren

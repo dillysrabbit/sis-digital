@@ -25,6 +25,7 @@ export interface SISFormData {
   conversationDate: string;
   nurseSignature: string;
   relativeOrCaregiver: string;
+  diagnosen: Array<{ diagnose: string; auswirkungen: string }>;
   oTon: string;
   themenfeld1: string;
   themenfeld2: string;
@@ -68,6 +69,7 @@ export function SISForm({ initialData, onSave, onGeneratePlan, onCheckSis, isSav
     conversationDate: initialData?.conversationDate || new Date().toISOString().split("T")[0],
     nurseSignature: initialData?.nurseSignature || "",
     relativeOrCaregiver: initialData?.relativeOrCaregiver || "",
+    diagnosen: initialData?.diagnosen || [],
     oTon: initialData?.oTon || "",
     themenfeld1: initialData?.themenfeld1 || "",
     themenfeld2: initialData?.themenfeld2 || "",
@@ -93,6 +95,7 @@ export function SISForm({ initialData, onSave, onGeneratePlan, onCheckSis, isSav
           conversationDate: initialData.conversationDate || new Date().toISOString().split("T")[0],
           nurseSignature: initialData.nurseSignature || "",
           relativeOrCaregiver: initialData.relativeOrCaregiver || "",
+          diagnosen: initialData.diagnosen || [],
           oTon: initialData.oTon || "",
           themenfeld1: initialData.themenfeld1 || "",
           themenfeld2: initialData.themenfeld2 || "",
@@ -109,7 +112,7 @@ export function SISForm({ initialData, onSave, onGeneratePlan, onCheckSis, isSav
     }
   }, [initialData, currentDataId]);
 
-  const updateField = (field: keyof SISFormData, value: string) => {
+  const updateField = (field: keyof SISFormData, value: string | Array<{ diagnose: string; auswirkungen: string }>) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
   };
 
@@ -235,8 +238,91 @@ export function SISForm({ initialData, onSave, onGeneratePlan, onCheckSis, isSav
         </CardContent>
       </Card>
 
+      {/* Pflegerelevante Diagnosen */}
+      <Card className="border-l-4 border-l-blue-500">
+        <CardHeader className="bg-blue-500 text-white rounded-t-lg py-3">
+          <CardTitle className="text-base font-semibold flex items-center justify-between">
+            <span>Pflegerelevante Diagnosen</span>
+            <Button
+              type="button"
+              size="sm"
+              variant="secondary"
+              onClick={() => {
+                const newDiagnosen = [...formData.diagnosen, { diagnose: "", auswirkungen: "" }];
+                updateField("diagnosen", newDiagnosen);
+              }}
+              className="bg-white/20 hover:bg-white/30 text-white border-white/30"
+            >
+              + Diagnose hinzufügen
+            </Button>
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="pt-4 space-y-4">
+          {formData.diagnosen.length === 0 ? (
+            <p className="text-muted-foreground text-sm italic">
+              Keine Diagnosen erfasst. Klicken Sie auf "+ Diagnose hinzufügen", um eine neue Diagnose hinzuzufügen.
+            </p>
+          ) : (
+            formData.diagnosen.map((diagnose, index) => (
+              <Card key={index} className="border border-gray-200">
+                <CardContent className="pt-4 space-y-3">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="flex-1 space-y-3">
+                      <div>
+                        <Label htmlFor={`diagnose-${index}`} className="text-sm font-medium">
+                          Diagnose {index + 1}
+                        </Label>
+                        <Input
+                          id={`diagnose-${index}`}
+                          value={diagnose.diagnose}
+                          onChange={(e) => {
+                            const newDiagnosen = [...formData.diagnosen];
+                            newDiagnosen[index].diagnose = e.target.value;
+                            updateField("diagnosen", newDiagnosen);
+                          }}
+                          placeholder="z.B. Diabetes mellitus Typ 2, Demenz, Herzinsuffizienz..."
+                          className="mt-1"
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor={`auswirkungen-${index}`} className="text-sm font-medium">
+                          Auswirkungen auf die Themenfelder
+                        </Label>
+                        <Textarea
+                          id={`auswirkungen-${index}`}
+                          value={diagnose.auswirkungen}
+                          onChange={(e) => {
+                            const newDiagnosen = [...formData.diagnosen];
+                            newDiagnosen[index].auswirkungen = e.target.value;
+                            updateField("diagnosen", newDiagnosen);
+                          }}
+                          placeholder="Beschreiben Sie, wie sich diese Diagnose auf Mobilität, Kognition, Selbstversorgung etc. auswirkt..."
+                          className="min-h-[100px] mt-1"
+                        />
+                      </div>
+                    </div>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => {
+                        const newDiagnosen = formData.diagnosen.filter((_, i) => i !== index);
+                        updateField("diagnosen", newDiagnosen);
+                      }}
+                      className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                    >
+                      Entfernen
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            ))
+          )}
+        </CardContent>
+      </Card>
+
       {/* Feld A - O-Ton */}
-      <Card className="border-l-4 border-l-[var(--sis-oton)]">
+      <Card className="border-l-4 border-l-[var(--sis-oton)]]">
         <CardHeader className="sis-oton text-white rounded-t-lg py-3">
           <CardTitle className="text-base font-semibold">
             Was bewegt Sie im Augenblick? Was brauchen Sie? Was können wir für Sie tun?
