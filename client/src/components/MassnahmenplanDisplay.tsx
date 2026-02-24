@@ -1,11 +1,12 @@
 import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Copy, Share2, Check, FileText, ClipboardCheck, Edit } from "lucide-react";
+import { Copy, Share2, Check, FileText, ClipboardCheck, Edit, Printer } from "lucide-react";
 import { toast } from "sonner";
 import { Streamdown } from "streamdown";
 import { TextBlockFAB } from "./TextBlockFAB";
 import { PlanVersionHistory } from "./PlanVersionHistory";
+import { useLocation } from "wouter";
 
 interface MassnahmenplanDisplayProps {
   plan: string;
@@ -37,6 +38,7 @@ export function MassnahmenplanDisplay({
   const [copied, setCopied] = useState(false);
   const [editedPlan, setEditedPlan] = useState(plan);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const [, setLocation] = useLocation();
   
   useEffect(() => {
     setEditedPlan(plan);
@@ -104,10 +106,21 @@ export function MassnahmenplanDisplay({
           </CardTitle>
           <div className="flex gap-2">
             {sisEntryId && (
-              <PlanVersionHistory
-                sisEntryId={sisEntryId}
-                onRestore={onVersionRestore}
-              />
+              <>
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => setLocation(`/print/${sisEntryId}`)}
+                  className="gap-2 bg-white/20 hover:bg-white/30 text-white border-white/30"
+                >
+                  <Printer className="h-4 w-4" />
+                  Drucken
+                </Button>
+                <PlanVersionHistory
+                  sisEntryId={sisEntryId}
+                  onRestore={onVersionRestore}
+                />
+              </>
             )}
             {onEdit && (
               <Button

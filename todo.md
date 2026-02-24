@@ -111,3 +111,8 @@
 ## Layout-Verbesserung
 - [x] SIS-Editor Layout von Sidepanel zu vertikaler Anordnung ändern
 - [x] SIS-Formular oben, Maßnahmenplan/Prüfung-Tabs darunter
+
+## Druckansicht für Maßnahmenpläne
+- [x] Druckansicht-Komponente mit optimiertem Layout erstellen
+- [x] Route für Druckansicht hinzufügen
+- [x] Drucken-Button im Maßnahmenplan-Editor
