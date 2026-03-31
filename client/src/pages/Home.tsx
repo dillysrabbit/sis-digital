@@ -4,7 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { trpc } from "@/lib/trpc";
 import { getLoginUrl } from "@/const";
 import { useLocation } from "wouter";
-import { Plus, FileText, Trash2, Edit, Calendar, User, Loader2, LogIn, ClipboardList, Shield } from "lucide-react";
+import { Plus, FileText, Trash2, Edit, Calendar, User, Loader2, LogIn, ClipboardList, Shield, Heart } from "lucide-react";
 import { toast } from "sonner";
 import {
   AlertDialog,
@@ -17,6 +17,27 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+
+function CaritasLogo({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 100 100" className={className} fill="none" xmlns="http://www.w3.org/2000/svg">
+      {/* Caritas Flame / Cross Symbol */}
+      <path
+        d="M50 5C50 5 20 30 20 55C20 71.57 33.43 85 50 85C66.57 85 80 71.57 80 55C80 30 50 5 50 5Z"
+        fill="#E2001A"
+      />
+      <path
+        d="M50 20C50 20 32 38 32 55C32 64.94 40.06 73 50 73C59.94 73 68 64.94 68 55C68 38 50 20 50 20Z"
+        fill="#FF4D3A"
+      />
+      <rect x="46" y="35" width="8" height="30" rx="2" fill="white" />
+      <rect x="37" y="44" width="26" height="8" rx="2" fill="white" />
+      <text x="50" y="97" textAnchor="middle" fill="#E2001A" fontSize="10" fontWeight="bold" fontFamily="sans-serif">
+        caritas
+      </text>
+    </svg>
+  );
+}
 
 export default function Home() {
   const { user, loading: authLoading, isAuthenticated } = useAuth();
@@ -50,22 +71,25 @@ export default function Home() {
 
   if (!isAuthenticated) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-green-50">
+      <div className="min-h-screen bg-gradient-to-br from-red-50 via-white to-orange-50">
         {/* Hero Section */}
         <div className="container py-16 md:py-24">
           <div className="max-w-4xl mx-auto text-center">
-            <div className="inline-flex items-center gap-2 bg-blue-100 text-blue-700 px-4 py-2 rounded-full text-sm font-medium mb-6">
-              <ClipboardList className="h-4 w-4" />
-              Digitale Pflegedokumentation
+            <div className="inline-flex items-center gap-2 bg-red-100 text-red-700 px-4 py-2 rounded-full text-sm font-medium mb-6">
+              <Heart className="h-4 w-4" />
+              Caritas Pflegedokumentation
             </div>
-            <h1 className="text-4xl md:text-5xl font-bold text-gray-900 mb-6">
-              SIS Digital
-            </h1>
+            <div className="flex items-center justify-center gap-4 mb-6">
+              <CaritasLogo className="h-16 w-16" />
+              <h1 className="text-4xl md:text-5xl font-bold text-gray-900">
+                SIS Digital
+              </h1>
+            </div>
             <p className="text-xl text-gray-600 mb-4">
               Strukturierte Informationssammlung
             </p>
             <p className="text-lg text-gray-500 mb-8 max-w-2xl mx-auto">
-              Erfassen Sie pflegerelevante Informationen digital und generieren Sie 
+              Erfassen Sie pflegerelevante Informationen digital und generieren Sie
               individuelle Maßnahmenpläne mit KI-Unterstützung.
             </p>
             <Button size="lg" onClick={() => window.location.href = getLoginUrl()} className="gap-2">
@@ -119,8 +143,8 @@ export default function Home() {
         <div className="container py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <ClipboardList className="h-6 w-6 text-primary" />
-              <h1 className="text-xl font-semibold">SIS Digital</h1>
+              <CaritasLogo className="h-7 w-7" />
+              <h1 className="text-xl font-semibold">Caritas SIS Digital</h1>
             </div>
             <div className="flex items-center gap-4">
               <span className="text-sm text-muted-foreground">
