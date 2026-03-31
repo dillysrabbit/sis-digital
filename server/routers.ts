@@ -7,15 +7,14 @@ import { createSisEntry, updateSisEntry, getSisEntry, listSisEntries, deleteSisE
 import { TRPCError } from "@trpc/server";
 import { generateSisPdfHtml } from "./pdfGenerator";
 
-// Verfügbare OpenAI Modelle
+// Verfügbare Claude Modelle
 const AVAILABLE_MODELS = [
-  { id: "gpt-4o", name: "GPT-4o", description: "Neuestes und leistungsstärkstes Modell" },
-  { id: "gpt-4-turbo", name: "GPT-4 Turbo", description: "Schneller und kosteneffizienter" },
-  { id: "gpt-4", name: "GPT-4", description: "Klassisches GPT-4 Modell" },
-  { id: "gpt-3.5-turbo", name: "GPT-3.5 Turbo", description: "Schnell und kostengünstig" },
+  { id: "claude-sonnet-4-6", name: "Claude Sonnet 4.6", description: "Schnell und leistungsstark" },
+  { id: "claude-opus-4-6", name: "Claude Opus 4.6", description: "Höchste Qualität und Reasoning" },
+  { id: "claude-haiku-4-5-20251001", name: "Claude Haiku 4.5", description: "Schnell und kostengünstig" },
 ] as const;
 
-const DEFAULT_MODEL = "gpt-4o";
+const DEFAULT_MODEL = "claude-sonnet-4-6";
 
 // Default System Prompt für die Maßnahmenplan-Generierung
 const DEFAULT_SYSTEM_PROMPT = `Du bist ein erfahrener Pflegeexperte und erstellst individuelle Maßnahmenpläne basierend auf der Strukturierten Informationssammlung (SIS). 
@@ -320,7 +319,7 @@ export const appRouter = router({
         return { html, patientName: entry.patientName };
       }),
 
-    // Generate Maßnahmenplan using OpenAI
+    // Generate Maßnahmenplan using Claude API
     generatePlan: protectedProcedure
       .input(z.object({
         id: z.number(),
@@ -335,55 +334,53 @@ export const appRouter = router({
         // Get API key - prefer user-provided, then user-saved, then system env
         let apiKey = input.apiKey;
         if (!apiKey) {
-          apiKey = await getSetting(ctx.user.id, "openai_api_key") || undefined;
+          apiKey = await getSetting(ctx.user.id, "anthropic_api_key") || undefined;
         }
         if (!apiKey) {
-          apiKey = process.env.OPENAI_API_KEY;
+          apiKey = process.env.ANTHROPIC_API_KEY;
         }
         if (!apiKey) {
-          throw new Error("Kein OpenAI API-Key verfügbar. Bitte hinterlegen Sie einen API-Key in den Einstellungen.");
+          throw new Error("Kein Anthropic API-Key verfügbar. Bitte hinterlegen Sie einen API-Key in den Einstellungen.");
         }
 
         // Build prompt from SIS data
         const prompt = buildSisPrompt(entry);
-        
+
         // Get custom system prompt or use default
         const systemPrompt = await getGlobalSetting("system_prompt") || DEFAULT_SYSTEM_PROMPT;
-        
-        // Get selected model or use default
-        const selectedModel = await getGlobalSetting("openai_model") || DEFAULT_MODEL;
 
-        // Call OpenAI API
-        const response = await fetch("https://api.openai.com/v1/chat/completions", {
+        // Get selected model or use default
+        const selectedModel = await getGlobalSetting("anthropic_model") || DEFAULT_MODEL;
+
+        // Call Anthropic Messages API
+        const response = await fetch("https://api.anthropic.com/v1/messages", {
           method: "POST",
           headers: {
-            "Content-Type": "application/json",
-            "Authorization": `Bearer ${apiKey}`,
+            "content-type": "application/json",
+            "x-api-key": apiKey,
+            "anthropic-version": "2023-06-01",
           },
           body: JSON.stringify({
             model: selectedModel,
+            system: systemPrompt,
             messages: [
-              {
-                role: "system",
-                content: systemPrompt
-              },
               {
                 role: "user",
                 content: prompt
               }
             ],
             temperature: 0.7,
-            max_tokens: 4000,
+            max_tokens: 4096,
           }),
         });
 
         if (!response.ok) {
           const error = await response.json();
-          throw new Error(error.error?.message || "OpenAI API Fehler");
+          throw new Error(error.error?.message || "Anthropic API Fehler");
         }
 
         const data = await response.json();
-        const plan = data.choices[0]?.message?.content || "";
+        const plan = data.content?.[0]?.text || "";
 
         // Save the generated plan
         await updateSisEntry(input.id, ctx.user.id, { massnahmenplan: plan });
@@ -398,7 +395,7 @@ export const appRouter = router({
         return { plan };
       }),
 
-    // Check SIS using OpenAI (separate function)
+    // Check SIS using Claude API (separate function)
     checkSis: protectedProcedure
       .input(z.object({
         id: z.number(),
@@ -413,55 +410,53 @@ export const appRouter = router({
         // Get API key - prefer user-provided, then user-saved, then system env
         let apiKey = input.apiKey;
         if (!apiKey) {
-          apiKey = await getSetting(ctx.user.id, "openai_api_key") || undefined;
+          apiKey = await getSetting(ctx.user.id, "anthropic_api_key") || undefined;
         }
         if (!apiKey) {
-          apiKey = process.env.OPENAI_API_KEY;
+          apiKey = process.env.ANTHROPIC_API_KEY;
         }
         if (!apiKey) {
-          throw new Error("Kein OpenAI API-Key verfügbar. Bitte hinterlegen Sie einen API-Key in den Einstellungen.");
+          throw new Error("Kein Anthropic API-Key verfügbar. Bitte hinterlegen Sie einen API-Key in den Einstellungen.");
         }
 
         // Build prompt from SIS data
         const prompt = buildSisPrompt(entry);
-        
+
         // Get custom system prompt for checking or use default
         const systemPrompt = await getGlobalSetting("check_system_prompt") || DEFAULT_CHECK_PROMPT;
-        
-        // Get selected model for checking or use default
-        const selectedModel = await getGlobalSetting("check_openai_model") || DEFAULT_MODEL;
 
-        // Call OpenAI API
-        const response = await fetch("https://api.openai.com/v1/chat/completions", {
+        // Get selected model for checking or use default
+        const selectedModel = await getGlobalSetting("check_anthropic_model") || DEFAULT_MODEL;
+
+        // Call Anthropic Messages API
+        const response = await fetch("https://api.anthropic.com/v1/messages", {
           method: "POST",
           headers: {
-            "Content-Type": "application/json",
-            "Authorization": `Bearer ${apiKey}`,
+            "content-type": "application/json",
+            "x-api-key": apiKey,
+            "anthropic-version": "2023-06-01",
           },
           body: JSON.stringify({
             model: selectedModel,
+            system: systemPrompt,
             messages: [
-              {
-                role: "system",
-                content: systemPrompt
-              },
               {
                 role: "user",
                 content: prompt
               }
             ],
             temperature: 0.7,
-            max_tokens: 4000,
+            max_tokens: 4096,
           }),
         });
 
         if (!response.ok) {
           const error = await response.json();
-          throw new Error(error.error?.message || "OpenAI API Fehler");
+          throw new Error(error.error?.message || "Anthropic API Fehler");
         }
 
         const data = await response.json();
-        const result = data.choices[0]?.message?.content || "";
+        const result = data.content?.[0]?.text || "";
 
         // Save the check result
         await updateSisEntry(input.id, ctx.user.id, { pruefungsergebnis: result });
@@ -474,7 +469,7 @@ export const appRouter = router({
     // Get API key (masked)
     getApiKey: protectedProcedure
       .query(async ({ ctx }) => {
-        const key = await getSetting(ctx.user.id, "openai_api_key");
+        const key = await getSetting(ctx.user.id, "anthropic_api_key");
         if (!key) return null;
         // Return masked key
         return key.substring(0, 7) + "..." + key.substring(key.length - 4);
@@ -484,14 +479,14 @@ export const appRouter = router({
     setApiKey: protectedProcedure
       .input(z.object({ apiKey: z.string() }))
       .mutation(async ({ ctx, input }) => {
-        await setSetting(ctx.user.id, "openai_api_key", input.apiKey);
+        await setSetting(ctx.user.id, "anthropic_api_key", input.apiKey);
         return { success: true };
       }),
 
     // Get full API key (for internal use)
     getFullApiKey: protectedProcedure
       .query(async ({ ctx }) => {
-        return await getSetting(ctx.user.id, "openai_api_key");
+        return await getSetting(ctx.user.id, "anthropic_api_key");
       }),
   }),
 
@@ -551,7 +546,7 @@ export const appRouter = router({
         if (ctx.user.role !== "admin") {
           throw new TRPCError({ code: "FORBIDDEN", message: "Nur Administratoren haben Zugriff" });
         }
-        const model = await getGlobalSetting("openai_model");
+        const model = await getGlobalSetting("anthropic_model");
         return model || DEFAULT_MODEL;
       }),
 
@@ -566,7 +561,7 @@ export const appRouter = router({
         if (!validModels.includes(input.model as any)) {
           throw new TRPCError({ code: "BAD_REQUEST", message: "Ungültiges Modell" });
         }
-        await setGlobalSetting("openai_model", input.model);
+        await setGlobalSetting("anthropic_model", input.model);
         return { success: true };
       }),
 
@@ -633,7 +628,7 @@ export const appRouter = router({
         if (ctx.user.role !== "admin") {
           throw new TRPCError({ code: "FORBIDDEN", message: "Nur Administratoren haben Zugriff" });
         }
-        const model = await getGlobalSetting("check_openai_model");
+        const model = await getGlobalSetting("check_anthropic_model");
         return model || DEFAULT_MODEL;
       }),
 
@@ -648,7 +643,7 @@ export const appRouter = router({
         if (!validModels.includes(input.model as any)) {
           throw new TRPCError({ code: "BAD_REQUEST", message: "Ungültiges Modell" });
         }
-        await setGlobalSetting("check_openai_model", input.model);
+        await setGlobalSetting("check_anthropic_model", input.model);
         return { success: true };
       }),
 
