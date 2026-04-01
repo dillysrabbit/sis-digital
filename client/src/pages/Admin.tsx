@@ -364,7 +364,7 @@ export default function Admin() {
                     KI-Modell für Maßnahmenplan
                   </CardTitle>
                   <CardDescription>
-                    Wählen Sie das OpenAI-Modell für die Maßnahmenplan-Generierung.
+                    Wählen Sie das Claude-Modell für die Maßnahmenplan-Generierung.
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
@@ -496,7 +496,7 @@ export default function Admin() {
                     KI-Modell für SIS-Prüfung
                   </CardTitle>
                   <CardDescription>
-                    Wählen Sie das OpenAI-Modell für die SIS-Prüfung.
+                    Wählen Sie das Claude-Modell für die SIS-Prüfung.
                   </CardDescription>
                 </CardHeader>
                 <CardContent>

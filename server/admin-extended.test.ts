@@ -101,7 +101,7 @@ describe("admin.getSelectedModel", () => {
 
     const result = await caller.admin.getSelectedModel();
 
-    expect(result).toBe("gpt-4o");
+    expect(result).toBe("claude-sonnet-4-6");
   });
 
   it("throws FORBIDDEN error for regular users", async () => {
@@ -117,7 +117,7 @@ describe("admin.setModel", () => {
     const { ctx } = createAdminContext();
     const caller = appRouter.createCaller(ctx);
 
-    const result = await caller.admin.setModel({ model: "gpt-4-turbo" });
+    const result = await caller.admin.setModel({ model: "claude-opus-4-6" });
 
     expect(result).toEqual({ success: true });
   });
@@ -136,7 +136,7 @@ describe("admin.setModel", () => {
     const caller = appRouter.createCaller(ctx);
 
     await expect(
-      caller.admin.setModel({ model: "gpt-4o" })
+      caller.admin.setModel({ model: "claude-sonnet-4-6" })
     ).rejects.toThrow("Nur Administratoren haben Zugriff");
   });
 });

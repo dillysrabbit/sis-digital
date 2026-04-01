@@ -71,14 +71,14 @@ describe("SIS Check Admin Settings", () => {
     expect(model).toBeDefined();
     expect(typeof model).toBe("string");
     // Should be a valid model ID
-    expect(["gpt-4o", "gpt-4-turbo", "gpt-4", "gpt-3.5-turbo"]).toContain(model);
+    expect(["claude-sonnet-4-6", "claude-opus-4-6", "claude-haiku-4-5-20251001"]).toContain(model);
   });
 
   it("admin can set check model", async () => {
     const ctx = createAdminContext();
     const caller = appRouter.createCaller(ctx);
 
-    const result = await caller.admin.setCheckModel({ model: "gpt-4" });
+    const result = await caller.admin.setCheckModel({ model: "claude-opus-4-6" });
     
     expect(result).toEqual({ success: true });
   });
@@ -141,14 +141,14 @@ describe("SIS Check vs Plan Independence", () => {
     const caller = appRouter.createCaller(ctx);
 
     // Set different models for each
-    await caller.admin.setModel({ model: "gpt-4o" });
-    await caller.admin.setCheckModel({ model: "gpt-3.5-turbo" });
+    await caller.admin.setModel({ model: "claude-sonnet-4-6" });
+    await caller.admin.setCheckModel({ model: "claude-haiku-4-5-20251001" });
 
     const planModel = await caller.admin.getSelectedModel();
     const checkModel = await caller.admin.getCheckSelectedModel();
-    
+
     // They should be different
-    expect(planModel).toBe("gpt-4o");
-    expect(checkModel).toBe("gpt-3.5-turbo");
+    expect(planModel).toBe("claude-sonnet-4-6");
+    expect(checkModel).toBe("claude-haiku-4-5-20251001");
   });
 });

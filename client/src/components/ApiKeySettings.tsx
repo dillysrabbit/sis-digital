@@ -58,10 +58,10 @@ export function ApiKeySettings({ onApiKeySaved }: ApiKeySettingsProps) {
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Key className="h-5 w-5" />
-            OpenAI API-Key
+            Anthropic API-Key
           </DialogTitle>
           <DialogDescription>
-            Geben Sie Ihren OpenAI API-Key ein, um Maßnahmenpläne automatisch generieren zu lassen.
+            Geben Sie Ihren Anthropic API-Key ein, um Maßnahmenpläne mit Claude automatisch generieren zu lassen.
             Der Key wird sicher gespeichert und nur für die Generierung verwendet.
           </DialogDescription>
         </DialogHeader>
@@ -79,7 +79,7 @@ export function ApiKeySettings({ onApiKeySaved }: ApiKeySettingsProps) {
                 type={showKey ? "text" : "password"}
                 value={apiKey}
                 onChange={(e) => setApiKey(e.target.value)}
-                placeholder="sk-..."
+                placeholder="sk-ant-..."
                 className="pr-10"
               />
               <Button
@@ -97,12 +97,12 @@ export function ApiKeySettings({ onApiKeySaved }: ApiKeySettingsProps) {
             <p>
               Sie können einen API-Key unter{" "}
               <a
-                href="https://platform.openai.com/api-keys"
+                href="https://console.anthropic.com/settings/keys"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="text-primary underline"
               >
-                platform.openai.com/api-keys
+                console.anthropic.com
               </a>{" "}
               erstellen.
             </p>
