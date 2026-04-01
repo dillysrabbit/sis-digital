@@ -57,9 +57,9 @@ export default function Login() {
   }, [isAuthenticated, setLocation]);
 
   useEffect(() => {
-    fetch("/api/auth/providers")
+    fetch("/api/health")
       .then((r) => r.json())
-      .then(setProviders)
+      .then((data) => setProviders({ google: !!data.google, github: !!data.github }))
       .catch(() => setProviders({ google: false, github: false }));
   }, []);
 
