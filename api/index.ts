@@ -10,7 +10,7 @@ const app = express();
 app.use(express.json({ limit: "50mb" }));
 app.use(express.urlencoded({ limit: "50mb", extended: true }));
 
-// OAuth callback
+// Auth routes (Google, GitHub OAuth)
 registerOAuthRoutes(app);
 
 // PDF Export endpoint

@@ -5,6 +5,7 @@ import { Route, Switch } from "wouter";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { ThemeProvider } from "./contexts/ThemeContext";
 import Home from "./pages/Home";
+import Login from "./pages/Login";
 import SISEditor from "./pages/SISEditor";
 import Admin from "./pages/Admin";
 import TextBlocksAdmin from "./pages/TextBlocksAdmin";
@@ -14,6 +15,7 @@ function Router() {
   return (
     <Switch>
       <Route path="/" component={Home} />
+      <Route path="/login" component={Login} />
       <Route path="/sis/new" component={SISEditor} />
       <Route path="/sis/:id" component={SISEditor} />
       <Route path="/print/:id" component={PrintPlan} />
