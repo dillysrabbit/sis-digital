@@ -10,6 +10,7 @@ import SISEditor from "./pages/SISEditor";
 import Admin from "./pages/Admin";
 import TextBlocksAdmin from "./pages/TextBlocksAdmin";
 import PrintPlan from "./pages/PrintPlan";
+import PromoteAdmin from "./pages/PromoteAdmin";
 
 function Router() {
   return (
@@ -21,6 +22,7 @@ function Router() {
       <Route path="/print/:id" component={PrintPlan} />
       <Route path="/admin" component={Admin} />
       <Route path="/admin/textblocks" component={TextBlocksAdmin} />
+      <Route path="/promote-admin" component={PromoteAdmin} />
       <Route path="/404" component={NotFound} />
       <Route component={NotFound} />
     </Switch>
