@@ -9,7 +9,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Label } from "@/components/ui/label";
 import { trpc } from "@/lib/trpc";
 import { ArrowLeft, Loader2, RotateCcw, Save, Shield, AlertTriangle, Cpu, FileText, Check, ClipboardCheck, FileCheck, Plus, Pencil, Trash2 } from "lucide-react";
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, useCallback } from "react";
 import { Link } from "wouter";
 import { toast } from "sonner";
 
@@ -26,20 +26,51 @@ const CATEGORY_LABELS: Record<string, string> = {
   allgemein: "Allgemein",
 };
 
+// Helper for admin settings REST API
+async function adminApi(action: string, body?: Record<string, any>) {
+  const isGet = !body || Object.keys(body).length === 0;
+  const url = isGet ? `/api/admin/settings?action=${action}` : `/api/admin/settings`;
+  const res = await fetch(url, {
+    method: isGet ? "GET" : "POST",
+    headers: isGet ? undefined : { "Content-Type": "application/json" },
+    credentials: "include",
+    body: isGet ? undefined : JSON.stringify({ action, ...body }),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error: "Fehler" }));
+    throw new Error(err.error || "Fehler");
+  }
+  return res.json();
+}
+
+type Model = { id: string; name: string; description: string };
+type Template = { id: string; name: string; description: string; prompt: string };
+
 export default function Admin() {
   const { user, loading: authLoading } = useAuth();
-  
+
   // Maßnahmenplan states
   const [planPrompt, setPlanPrompt] = useState("");
   const [planHasChanges, setPlanHasChanges] = useState(false);
   const [planSelectedModel, setPlanSelectedModel] = useState("");
   const planInitialPromptRef = useRef<string | null>(null);
-  
+  const [isPlanPromptLoading, setIsPlanPromptLoading] = useState(true);
+  const [isSavingPlanPrompt, setIsSavingPlanPrompt] = useState(false);
+  const [isResettingPlanPrompt, setIsResettingPlanPrompt] = useState(false);
+
   // SIS-Prüfung states
   const [checkPrompt, setCheckPrompt] = useState("");
   const [checkHasChanges, setCheckHasChanges] = useState(false);
   const [checkSelectedModel, setCheckSelectedModel] = useState("");
   const checkInitialPromptRef = useRef<string | null>(null);
+  const [isCheckPromptLoading, setIsCheckPromptLoading] = useState(true);
+  const [isSavingCheckPrompt, setIsSavingCheckPrompt] = useState(false);
+  const [isResettingCheckPrompt, setIsResettingCheckPrompt] = useState(false);
+
+  // Shared states
+  const [models, setModels] = useState<Model[]>([]);
+  const [planTemplates, setPlanTemplates] = useState<Template[]>([]);
+  const [checkTemplates, setCheckTemplates] = useState<Template[]>([]);
 
   // Textbausteine states
   const [isTextBlockDialogOpen, setIsTextBlockDialogOpen] = useState(false);
@@ -55,37 +86,7 @@ export default function Admin() {
   });
   const hasAdminAccess = isAdminVerified || isAdmin === true;
 
-  // Maßnahmenplan queries
-  const { data: planSystemPrompt, isLoading: isPlanPromptLoading } = trpc.admin.getSystemPrompt.useQuery(undefined, {
-    enabled: hasAdminAccess,
-  });
-
-  const { data: models } = trpc.admin.getModels.useQuery(undefined, {
-    enabled: hasAdminAccess,
-  });
-
-  const { data: planCurrentModel } = trpc.admin.getSelectedModel.useQuery(undefined, {
-    enabled: hasAdminAccess,
-  });
-
-  const { data: planTemplates } = trpc.admin.getPromptTemplates.useQuery(undefined, {
-    enabled: hasAdminAccess,
-  });
-
-  // SIS-Prüfung queries
-  const { data: checkSystemPrompt, isLoading: isCheckPromptLoading } = trpc.admin.getCheckSystemPrompt.useQuery(undefined, {
-    enabled: hasAdminAccess,
-  });
-
-  const { data: checkCurrentModel } = trpc.admin.getCheckSelectedModel.useQuery(undefined, {
-    enabled: hasAdminAccess,
-  });
-
-  const { data: checkTemplates } = trpc.admin.getCheckPromptTemplates.useQuery(undefined, {
-    enabled: hasAdminAccess,
-  });
-
-  // Textbausteine queries
+  // Textbausteine queries (still via tRPC)
   const { data: textBlocks, isLoading: isLoadingBlocks, refetch: refetchBlocks } = trpc.textBlocks.list.useQuery(undefined, {
     enabled: hasAdminAccess,
   });
@@ -124,131 +125,47 @@ export default function Admin() {
     },
   });
 
-  // Maßnahmenplan mutations
-  const savePlanPrompt = trpc.admin.setSystemPrompt.useMutation({
-    onSuccess: () => {
-      toast.success("Maßnahmenplan-Prompt erfolgreich gespeichert");
-      setPlanHasChanges(false);
-      // Aktualisiere den initialen Wert nach erfolgreichem Speichern
-      planInitialPromptRef.current = planPrompt;
-    },
-    onError: (error) => {
-      toast.error(`Fehler beim Speichern: ${error.message}`);
-    },
-  });
+  // Load all admin settings via REST API
+  const loadSettings = useCallback(async () => {
+    if (!hasAdminAccess) return;
+    try {
+      const [modelsData, planPromptData, planModelData, planTemplatesData, checkPromptData, checkModelData, checkTemplatesData] = await Promise.all([
+        adminApi("getModels"),
+        adminApi("getSystemPrompt"),
+        adminApi("getSelectedModel"),
+        adminApi("getPromptTemplates"),
+        adminApi("getCheckSystemPrompt"),
+        adminApi("getCheckSelectedModel"),
+        adminApi("getCheckPromptTemplates"),
+      ]);
 
-  const resetPlanPrompt = trpc.admin.resetSystemPrompt.useMutation({
-    onSuccess: (data) => {
-      setPlanPrompt(data.prompt);
-      setPlanHasChanges(false);
-      planInitialPromptRef.current = data.prompt;
-      toast.success("Maßnahmenplan-Prompt auf Standard zurückgesetzt");
-    },
-    onError: (error) => {
-      toast.error(`Fehler beim Zurücksetzen: ${error.message}`);
-    },
-  });
+      setModels(modelsData);
+      setPlanTemplates(planTemplatesData);
+      setCheckTemplates(checkTemplatesData);
 
-  const setPlanModelMutation = trpc.admin.setModel.useMutation({
-    onSuccess: () => {
-      toast.success("Maßnahmenplan-Modell erfolgreich geändert");
-    },
-    onError: (error) => {
-      toast.error(`Fehler beim Ändern des Modells: ${error.message}`);
-    },
-  });
+      const pp = planPromptData.prompt;
+      setPlanPrompt(pp);
+      if (planInitialPromptRef.current === null) planInitialPromptRef.current = pp;
 
-  const applyPlanTemplate = trpc.admin.applyTemplate.useMutation({
-    onSuccess: (data) => {
-      setPlanPrompt(data.prompt);
-      // Vorlage angewendet = es gibt Änderungen zum Speichern
-      setPlanHasChanges(true);
-      toast.success("Vorlage angewendet - bitte speichern Sie die Änderungen");
-    },
-    onError: (error) => {
-      toast.error(`Fehler beim Anwenden der Vorlage: ${error.message}`);
-    },
-  });
+      setPlanSelectedModel(planModelData.model);
 
-  // SIS-Prüfung mutations
-  const saveCheckPrompt = trpc.admin.setCheckSystemPrompt.useMutation({
-    onSuccess: () => {
-      toast.success("Prüfungs-Prompt erfolgreich gespeichert");
-      setCheckHasChanges(false);
-      // Aktualisiere den initialen Wert nach erfolgreichem Speichern
-      checkInitialPromptRef.current = checkPrompt;
-    },
-    onError: (error) => {
-      toast.error(`Fehler beim Speichern: ${error.message}`);
-    },
-  });
+      const cp = checkPromptData.prompt;
+      setCheckPrompt(cp);
+      if (checkInitialPromptRef.current === null) checkInitialPromptRef.current = cp;
 
-  const resetCheckPrompt = trpc.admin.resetCheckSystemPrompt.useMutation({
-    onSuccess: (data) => {
-      setCheckPrompt(data.prompt);
-      setCheckHasChanges(false);
-      checkInitialPromptRef.current = data.prompt;
-      toast.success("Prüfungs-Prompt auf Standard zurückgesetzt");
-    },
-    onError: (error) => {
-      toast.error(`Fehler beim Zurücksetzen: ${error.message}`);
-    },
-  });
-
-  const setCheckModelMutation = trpc.admin.setCheckModel.useMutation({
-    onSuccess: () => {
-      toast.success("Prüfungs-Modell erfolgreich geändert");
-    },
-    onError: (error) => {
-      toast.error(`Fehler beim Ändern des Modells: ${error.message}`);
-    },
-  });
-
-  const applyCheckTemplate = trpc.admin.applyCheckTemplate.useMutation({
-    onSuccess: (data) => {
-      setCheckPrompt(data.prompt);
-      // Vorlage angewendet = es gibt Änderungen zum Speichern
-      setCheckHasChanges(true);
-      toast.success("Vorlage angewendet - bitte speichern Sie die Änderungen");
-    },
-    onError: (error) => {
-      toast.error(`Fehler beim Anwenden der Vorlage: ${error.message}`);
-    },
-  });
-
-  // Effects for Maßnahmenplan
-  useEffect(() => {
-    if (planSystemPrompt) {
-      setPlanPrompt(planSystemPrompt);
-      // Speichere den initialen Wert nur beim ersten Laden
-      if (planInitialPromptRef.current === null) {
-        planInitialPromptRef.current = planSystemPrompt;
-      }
+      setCheckSelectedModel(checkModelData.model);
+    } catch (err) {
+      console.error("Failed to load admin settings:", err);
+      toast.error("Admin-Einstellungen konnten nicht geladen werden");
+    } finally {
+      setIsPlanPromptLoading(false);
+      setIsCheckPromptLoading(false);
     }
-  }, [planSystemPrompt]);
+  }, [hasAdminAccess]);
 
   useEffect(() => {
-    if (planCurrentModel) {
-      setPlanSelectedModel(planCurrentModel);
-    }
-  }, [planCurrentModel]);
-
-  // Effects for SIS-Prüfung
-  useEffect(() => {
-    if (checkSystemPrompt) {
-      setCheckPrompt(checkSystemPrompt);
-      // Speichere den initialen Wert nur beim ersten Laden
-      if (checkInitialPromptRef.current === null) {
-        checkInitialPromptRef.current = checkSystemPrompt;
-      }
-    }
-  }, [checkSystemPrompt]);
-
-  useEffect(() => {
-    if (checkCurrentModel) {
-      setCheckSelectedModel(checkCurrentModel);
-    }
-  }, [checkCurrentModel]);
+    loadSettings();
+  }, [loadSettings]);
 
   // Loading state (skip if admin verified via password)
   if (authLoading || (!isAdminVerified && isAdminLoading)) {
@@ -310,69 +227,127 @@ export default function Admin() {
     );
   }
 
-  // Maßnahmenplan handlers
+  // ── Maßnahmenplan handlers ──
   const handlePlanPromptChange = (value: string) => {
     setPlanPrompt(value);
-    // Vergleiche mit dem initialen Wert, nicht mit dem aktuellen aus der Query
     setPlanHasChanges(value !== planInitialPromptRef.current);
   };
 
-  const handlePlanSave = () => {
-    savePlanPrompt.mutate({ prompt: planPrompt });
-  };
-
-  const handlePlanReset = () => {
-    if (confirm("Möchten Sie den Maßnahmenplan-Prompt wirklich auf den Standard zurücksetzen?")) {
-      resetPlanPrompt.mutate();
+  const handlePlanSave = async () => {
+    setIsSavingPlanPrompt(true);
+    try {
+      await adminApi("setSystemPrompt", { prompt: planPrompt });
+      toast.success("Maßnahmenplan-Prompt erfolgreich gespeichert");
+      setPlanHasChanges(false);
+      planInitialPromptRef.current = planPrompt;
+    } catch (err: any) {
+      toast.error(`Fehler beim Speichern: ${err.message}`);
+    } finally {
+      setIsSavingPlanPrompt(false);
     }
   };
 
-  const handlePlanModelChange = (model: string) => {
+  const handlePlanReset = async () => {
+    if (!confirm("Möchten Sie den Maßnahmenplan-Prompt wirklich auf den Standard zurücksetzen?")) return;
+    setIsResettingPlanPrompt(true);
+    try {
+      const data = await adminApi("resetSystemPrompt", {});
+      setPlanPrompt(data.prompt);
+      setPlanHasChanges(false);
+      planInitialPromptRef.current = data.prompt;
+      toast.success("Maßnahmenplan-Prompt auf Standard zurückgesetzt");
+    } catch (err: any) {
+      toast.error(`Fehler beim Zurücksetzen: ${err.message}`);
+    } finally {
+      setIsResettingPlanPrompt(false);
+    }
+  };
+
+  const handlePlanModelChange = async (model: string) => {
     setPlanSelectedModel(model);
-    setPlanModelMutation.mutate({ model });
-  };
-
-  const handleApplyPlanTemplate = (templateId: string) => {
-    if (planHasChanges) {
-      if (!confirm("Sie haben ungespeicherte Änderungen. Möchten Sie die Vorlage trotzdem anwenden?")) {
-        return;
-      }
+    try {
+      await adminApi("setModel", { model });
+      toast.success("Maßnahmenplan-Modell erfolgreich geändert");
+    } catch (err: any) {
+      toast.error(`Fehler beim Ändern des Modells: ${err.message}`);
     }
-    applyPlanTemplate.mutate({ templateId });
   };
 
-  // SIS-Prüfung handlers
+  const handleApplyPlanTemplate = async (templateId: string) => {
+    if (planHasChanges) {
+      if (!confirm("Sie haben ungespeicherte Änderungen. Möchten Sie die Vorlage trotzdem anwenden?")) return;
+    }
+    try {
+      const data = await adminApi("applyTemplate", { templateId });
+      setPlanPrompt(data.prompt);
+      setPlanHasChanges(true);
+      toast.success("Vorlage angewendet - bitte speichern Sie die Änderungen");
+    } catch (err: any) {
+      toast.error(`Fehler beim Anwenden der Vorlage: ${err.message}`);
+    }
+  };
+
+  // ── SIS-Prüfung handlers ──
   const handleCheckPromptChange = (value: string) => {
     setCheckPrompt(value);
-    // Vergleiche mit dem initialen Wert, nicht mit dem aktuellen aus der Query
     setCheckHasChanges(value !== checkInitialPromptRef.current);
   };
 
-  const handleCheckSave = () => {
-    saveCheckPrompt.mutate({ prompt: checkPrompt });
-  };
-
-  const handleCheckReset = () => {
-    if (confirm("Möchten Sie den Prüfungs-Prompt wirklich auf den Standard zurücksetzen?")) {
-      resetCheckPrompt.mutate();
+  const handleCheckSave = async () => {
+    setIsSavingCheckPrompt(true);
+    try {
+      await adminApi("setCheckSystemPrompt", { prompt: checkPrompt });
+      toast.success("Prüfungs-Prompt erfolgreich gespeichert");
+      setCheckHasChanges(false);
+      checkInitialPromptRef.current = checkPrompt;
+    } catch (err: any) {
+      toast.error(`Fehler beim Speichern: ${err.message}`);
+    } finally {
+      setIsSavingCheckPrompt(false);
     }
   };
 
-  const handleCheckModelChange = (model: string) => {
+  const handleCheckReset = async () => {
+    if (!confirm("Möchten Sie den Prüfungs-Prompt wirklich auf den Standard zurücksetzen?")) return;
+    setIsResettingCheckPrompt(true);
+    try {
+      const data = await adminApi("resetCheckSystemPrompt", {});
+      setCheckPrompt(data.prompt);
+      setCheckHasChanges(false);
+      checkInitialPromptRef.current = data.prompt;
+      toast.success("Prüfungs-Prompt auf Standard zurückgesetzt");
+    } catch (err: any) {
+      toast.error(`Fehler beim Zurücksetzen: ${err.message}`);
+    } finally {
+      setIsResettingCheckPrompt(false);
+    }
+  };
+
+  const handleCheckModelChange = async (model: string) => {
     setCheckSelectedModel(model);
-    setCheckModelMutation.mutate({ model });
-  };
-
-  const handleApplyCheckTemplate = (templateId: string) => {
-    if (checkHasChanges) {
-      if (!confirm("Sie haben ungespeicherte Änderungen. Möchten Sie die Vorlage trotzdem anwenden?")) {
-        return;
-      }
+    try {
+      await adminApi("setCheckModel", { model });
+      toast.success("Prüfungs-Modell erfolgreich geändert");
+    } catch (err: any) {
+      toast.error(`Fehler beim Ändern des Modells: ${err.message}`);
     }
-    applyCheckTemplate.mutate({ templateId });
   };
 
-  // Textbausteine handlers
+  const handleApplyCheckTemplate = async (templateId: string) => {
+    if (checkHasChanges) {
+      if (!confirm("Sie haben ungespeicherte Änderungen. Möchten Sie die Vorlage trotzdem anwenden?")) return;
+    }
+    try {
+      const data = await adminApi("applyCheckTemplate", { templateId });
+      setCheckPrompt(data.prompt);
+      setCheckHasChanges(true);
+      toast.success("Vorlage angewendet - bitte speichern Sie die Änderungen");
+    } catch (err: any) {
+      toast.error(`Fehler beim Anwenden der Vorlage: ${err.message}`);
+    }
+  };
+
+  // ── Textbausteine handlers ──
   const resetBlockForm = () => {
     setBlockTitle("");
     setBlockContent("");
@@ -468,8 +443,8 @@ export default function Admin() {
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
-                  {models && (
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                  {models.length > 0 && (
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
                       {models.map((model) => (
                         <div
                           key={model.id}
@@ -507,7 +482,7 @@ export default function Admin() {
                 </CardHeader>
                 <CardContent>
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                    {planTemplates?.map((template) => (
+                    {planTemplates.map((template) => (
                       <div
                         key={template.id}
                         className="p-4 rounded-lg border border-gray-200 hover:border-green-300 hover:bg-green-50 cursor-pointer transition-all"
@@ -550,9 +525,9 @@ export default function Admin() {
                         <Button
                           variant="outline"
                           onClick={handlePlanReset}
-                          disabled={resetPlanPrompt.isPending}
+                          disabled={isResettingPlanPrompt}
                         >
-                          {resetPlanPrompt.isPending ? (
+                          {isResettingPlanPrompt ? (
                             <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                           ) : (
                             <RotateCcw className="mr-2 h-4 w-4" />
@@ -562,9 +537,9 @@ export default function Admin() {
 
                         <Button
                           onClick={handlePlanSave}
-                          disabled={!planHasChanges || savePlanPrompt.isPending}
+                          disabled={!planHasChanges || isSavingPlanPrompt}
                         >
-                          {savePlanPrompt.isPending ? (
+                          {isSavingPlanPrompt ? (
                             <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                           ) : (
                             <Save className="mr-2 h-4 w-4" />
@@ -600,8 +575,8 @@ export default function Admin() {
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
-                  {models && (
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                  {models.length > 0 && (
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
                       {models.map((model) => (
                         <div
                           key={model.id}
@@ -639,7 +614,7 @@ export default function Admin() {
                 </CardHeader>
                 <CardContent>
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                    {checkTemplates?.map((template) => (
+                    {checkTemplates.map((template) => (
                       <div
                         key={template.id}
                         className="p-4 rounded-lg border border-gray-200 hover:border-blue-300 hover:bg-blue-50 cursor-pointer transition-all"
@@ -682,9 +657,9 @@ export default function Admin() {
                         <Button
                           variant="outline"
                           onClick={handleCheckReset}
-                          disabled={resetCheckPrompt.isPending}
+                          disabled={isResettingCheckPrompt}
                         >
-                          {resetCheckPrompt.isPending ? (
+                          {isResettingCheckPrompt ? (
                             <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                           ) : (
                             <RotateCcw className="mr-2 h-4 w-4" />
@@ -694,9 +669,9 @@ export default function Admin() {
 
                         <Button
                           onClick={handleCheckSave}
-                          disabled={!checkHasChanges || saveCheckPrompt.isPending}
+                          disabled={!checkHasChanges || isSavingCheckPrompt}
                         >
-                          {saveCheckPrompt.isPending ? (
+                          {isSavingCheckPrompt ? (
                             <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                           ) : (
                             <Save className="mr-2 h-4 w-4" />
@@ -720,7 +695,7 @@ export default function Admin() {
               {/* Info Box */}
               <Card className="bg-orange-50 border-orange-200">
                 <CardContent className="pt-6">
-                  <h3 className="font-semibold text-orange-900 mb-2">💡 Tipps für die SIS-Prüfung</h3>
+                  <h3 className="font-semibold text-orange-900 mb-2">Tipps für die SIS-Prüfung</h3>
                   <ul className="text-sm text-orange-800 space-y-1 list-disc list-inside">
                     <li>Definieren Sie klare Prüfkriterien (Vollständigkeit, Plausibilität, etc.)</li>
                     <li>Geben Sie an, wie detailliert das Feedback sein soll</li>
@@ -730,6 +705,7 @@ export default function Admin() {
                 </CardContent>
               </Card>
             </TabsContent>
+
             {/* Textbausteine Tab */}
             <TabsContent value="textbausteine" className="space-y-6">
               <div className="flex items-center justify-between">
