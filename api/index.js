@@ -30180,8 +30180,8 @@ async function createContext(opts) {
 
 // server/api-handler.ts
 async function handler(req, res) {
-  const url2 = req.url || "";
-  const trpcPath = url2.replace(/^\/api\/trpc\/?/, "").split("?")[0];
+  const url2 = new URL(req.url || "", `http://${req.headers.host}`);
+  const trpcPath = url2.searchParams.get("path") || url2.pathname.replace(/^\/api\/trpc\/?/, "");
   return nodeHTTPRequestHandler({
     router: appRouter,
     path: trpcPath,

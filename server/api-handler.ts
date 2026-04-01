@@ -4,9 +4,13 @@ import { appRouter } from "../server/routers";
 import { createContext } from "../server/_core/context";
 
 export default async function handler(req: IncomingMessage, res: ServerResponse) {
-  // Strip the /api/trpc prefix to get the tRPC path
-  const url = req.url || "";
-  const trpcPath = url.replace(/^\/api\/trpc\/?/, "").split("?")[0];
+  const url = new URL(req.url || "", `http://${req.headers.host}`);
+
+  // Vercel rewrites "/api/trpc/:path*" → "/api?path=<captured>"
+  // so the tRPC procedure path arrives as the "path" query parameter.
+  // Fall back to stripping the URL prefix for local dev.
+  const trpcPath = url.searchParams.get("path")
+    || url.pathname.replace(/^\/api\/trpc\/?/, "");
 
   return nodeHTTPRequestHandler({
     router: appRouter,
