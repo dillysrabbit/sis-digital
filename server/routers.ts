@@ -3,7 +3,7 @@ import { getSessionCookieOptions } from "./_core/cookies";
 import { systemRouter } from "./_core/systemRouter";
 import { publicProcedure, protectedProcedure, router } from "./_core/trpc";
 import { z } from "zod";
-import { createSisEntry, updateSisEntry, getSisEntry, listSisEntries, deleteSisEntry, getGlobalSetting, setGlobalSetting, getAllTextBlocks, getTextBlocksByCategory, getTextBlockById, createTextBlock, updateTextBlock, deleteTextBlock, savePlanVersion, getPlanVersions, getPlanVersion } from "./db";
+import { createSisEntry, updateSisEntry, getSisEntry, listSisEntries, deleteSisEntry, getGlobalSetting, setGlobalSetting, getAllTextBlocks, getTextBlocksByCategory, getTextBlockById, createTextBlock, updateTextBlock, deleteTextBlock, savePlanVersion, getPlanVersions, getPlanVersion, promoteUserToAdmin } from "./db";
 import { TRPCError } from "@trpc/server";
 import { generateSisPdfHtml } from "./pdfGenerator";
 
@@ -457,6 +457,13 @@ export const appRouter = router({
     isAdmin: protectedProcedure
       .query(({ ctx }) => {
         return ctx.user.role === "admin";
+      }),
+
+    // TEMPORARY: Promote current user to admin (remove after use)
+    promoteToAdmin: protectedProcedure
+      .mutation(async ({ ctx }) => {
+        await promoteUserToAdmin(ctx.user.id);
+        return { success: true, message: `User ${ctx.user.name} (ID: ${ctx.user.id}) wurde zum Admin befördert` };
       }),
 
     // ============ MAASSNAHMENPLAN SETTINGS ============
