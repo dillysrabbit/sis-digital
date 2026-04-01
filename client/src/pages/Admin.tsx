@@ -521,37 +521,39 @@ export default function Admin() {
                         className="min-h-[300px] font-mono text-sm"
                       />
 
-                      <div className="flex items-center justify-between pt-4 border-t">
+                      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2 pt-4 border-t">
                         <Button
                           variant="outline"
                           onClick={handlePlanReset}
                           disabled={isResettingPlanPrompt}
+                          className="w-full sm:w-auto"
                         >
                           {isResettingPlanPrompt ? (
                             <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                           ) : (
                             <RotateCcw className="mr-2 h-4 w-4" />
                           )}
-                          Auf Standard zurücksetzen
+                          Zurücksetzen
                         </Button>
 
                         <Button
                           onClick={handlePlanSave}
                           disabled={!planHasChanges || isSavingPlanPrompt}
+                          className="w-full sm:w-auto"
                         >
                           {isSavingPlanPrompt ? (
                             <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                           ) : (
                             <Save className="mr-2 h-4 w-4" />
                           )}
-                          Änderungen speichern
+                          Speichern
                         </Button>
                       </div>
 
                       {planHasChanges && (
-                        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-                          <p className="text-sm text-yellow-800">
-                            <strong>Hinweis:</strong> Sie haben ungespeicherte Änderungen.
+                        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
+                          <p className="text-xs sm:text-sm text-yellow-800">
+                            <strong>Hinweis:</strong> Ungespeicherte Änderungen vorhanden.
                           </p>
                         </div>
                       )}
@@ -653,37 +655,39 @@ export default function Admin() {
                         className="min-h-[300px] font-mono text-sm"
                       />
 
-                      <div className="flex items-center justify-between pt-4 border-t">
+                      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2 pt-4 border-t">
                         <Button
                           variant="outline"
                           onClick={handleCheckReset}
                           disabled={isResettingCheckPrompt}
+                          className="w-full sm:w-auto"
                         >
                           {isResettingCheckPrompt ? (
                             <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                           ) : (
                             <RotateCcw className="mr-2 h-4 w-4" />
                           )}
-                          Auf Standard zurücksetzen
+                          Zurücksetzen
                         </Button>
 
                         <Button
                           onClick={handleCheckSave}
                           disabled={!checkHasChanges || isSavingCheckPrompt}
+                          className="w-full sm:w-auto"
                         >
                           {isSavingCheckPrompt ? (
                             <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                           ) : (
                             <Save className="mr-2 h-4 w-4" />
                           )}
-                          Änderungen speichern
+                          Speichern
                         </Button>
                       </div>
 
                       {checkHasChanges && (
-                        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-                          <p className="text-sm text-yellow-800">
-                            <strong>Hinweis:</strong> Sie haben ungespeicherte Änderungen.
+                        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
+                          <p className="text-xs sm:text-sm text-yellow-800">
+                            <strong>Hinweis:</strong> Ungespeicherte Änderungen vorhanden.
                           </p>
                         </div>
                       )}
