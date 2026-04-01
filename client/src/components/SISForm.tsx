@@ -239,8 +239,8 @@ export function SISForm({ initialData, onSave, onGeneratePlan, onCheckSis, isSav
       </Card>
 
       {/* Pflegerelevante Diagnosen */}
-      <div className="rounded-xl border border-l-4 border-l-blue-500 shadow-sm bg-card text-card-foreground">
-        <div className="bg-blue-500 text-white py-3 px-6 rounded-t-xl">
+      <div className="rounded-xl border border-l-4 border-l-blue-500 shadow-sm bg-card text-card-foreground overflow-hidden">
+        <div className="bg-blue-500 text-white py-3 px-6">
           <div className="text-base font-semibold flex items-center justify-between">
             <span>Pflegerelevante Diagnosen</span>
             <Button
@@ -322,8 +322,8 @@ export function SISForm({ initialData, onSave, onGeneratePlan, onCheckSis, isSav
       </div>
 
       {/* Feld A - O-Ton */}
-      <div className="rounded-xl border border-l-4 border-l-[var(--sis-oton)] shadow-sm bg-card text-card-foreground">
-        <div className="sis-oton text-white py-3 px-6 rounded-t-xl">
+      <div className="rounded-xl border border-l-4 border-l-[var(--sis-oton)] shadow-sm bg-card text-card-foreground overflow-hidden">
+        <div className="sis-oton text-white py-3 px-6">
           <div className="text-base font-semibold">
             Was bewegt Sie im Augenblick? Was brauchen Sie? Was können wir für Sie tun?
           </div>
@@ -346,8 +346,8 @@ export function SISForm({ initialData, onSave, onGeneratePlan, onCheckSis, isSav
 
       {/* Themenfelder */}
       {themenfelder.map((tf) => (
-        <div key={tf.key} className="rounded-xl border border-l-4 shadow-sm bg-card text-card-foreground" style={{ borderLeftColor: `var(--${tf.color.replace("sis-", "sis-")})` }}>
-          <div className={`${tf.color} ${tf.textColor} py-3 px-6 rounded-t-xl`}>
+        <div key={tf.key} className="rounded-xl border border-l-4 shadow-sm bg-card text-card-foreground overflow-hidden" style={{ borderLeftColor: `var(--${tf.color.replace("sis-", "sis-")})` }}>
+          <div className={`${tf.color} ${tf.textColor} py-3 px-6`}>
             <div className="text-base font-semibold">{tf.label}</div>
           </div>
           <div className="px-6 py-4 space-y-2">
