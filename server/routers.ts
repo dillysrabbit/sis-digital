@@ -3,7 +3,7 @@ import { getSessionCookieOptions } from "./_core/cookies";
 import { systemRouter } from "./_core/systemRouter";
 import { publicProcedure, protectedProcedure, router } from "./_core/trpc";
 import { z } from "zod";
-import { createSisEntry, updateSisEntry, getSisEntry, listSisEntries, deleteSisEntry, getSetting, setSetting, getGlobalSetting, setGlobalSetting, getAllTextBlocks, getTextBlocksByCategory, getTextBlockById, createTextBlock, updateTextBlock, deleteTextBlock, savePlanVersion, getPlanVersions, getPlanVersion } from "./db";
+import { createSisEntry, updateSisEntry, getSisEntry, listSisEntries, deleteSisEntry, getGlobalSetting, setGlobalSetting, getAllTextBlocks, getTextBlocksByCategory, getTextBlockById, createTextBlock, updateTextBlock, deleteTextBlock, savePlanVersion, getPlanVersions, getPlanVersion } from "./db";
 import { TRPCError } from "@trpc/server";
 import { generateSisPdfHtml } from "./pdfGenerator";
 
@@ -323,7 +323,6 @@ export const appRouter = router({
     generatePlan: protectedProcedure
       .input(z.object({
         id: z.number(),
-        apiKey: z.string().optional(),
       }))
       .mutation(async ({ ctx, input }) => {
         const entry = await getSisEntry(input.id, ctx.user.id);
@@ -331,16 +330,9 @@ export const appRouter = router({
           throw new Error("SIS-Eintrag nicht gefunden");
         }
 
-        // Get API key - prefer user-provided, then user-saved, then system env
-        let apiKey = input.apiKey;
+        const apiKey = process.env.ANTHROPIC_API_KEY;
         if (!apiKey) {
-          apiKey = await getSetting(ctx.user.id, "anthropic_api_key") || undefined;
-        }
-        if (!apiKey) {
-          apiKey = process.env.ANTHROPIC_API_KEY;
-        }
-        if (!apiKey) {
-          throw new Error("Kein Anthropic API-Key verfügbar. Bitte hinterlegen Sie einen API-Key in den Einstellungen.");
+          throw new Error("Kein Anthropic API-Key konfiguriert. Bitte ANTHROPIC_API_KEY Umgebungsvariable setzen.");
         }
 
         // Build prompt from SIS data
@@ -399,7 +391,6 @@ export const appRouter = router({
     checkSis: protectedProcedure
       .input(z.object({
         id: z.number(),
-        apiKey: z.string().optional(),
       }))
       .mutation(async ({ ctx, input }) => {
         const entry = await getSisEntry(input.id, ctx.user.id);
@@ -407,16 +398,9 @@ export const appRouter = router({
           throw new Error("SIS-Eintrag nicht gefunden");
         }
 
-        // Get API key - prefer user-provided, then user-saved, then system env
-        let apiKey = input.apiKey;
+        const apiKey = process.env.ANTHROPIC_API_KEY;
         if (!apiKey) {
-          apiKey = await getSetting(ctx.user.id, "anthropic_api_key") || undefined;
-        }
-        if (!apiKey) {
-          apiKey = process.env.ANTHROPIC_API_KEY;
-        }
-        if (!apiKey) {
-          throw new Error("Kein Anthropic API-Key verfügbar. Bitte hinterlegen Sie einen API-Key in den Einstellungen.");
+          throw new Error("Kein Anthropic API-Key konfiguriert. Bitte ANTHROPIC_API_KEY Umgebungsvariable setzen.");
         }
 
         // Build prompt from SIS data
@@ -465,30 +449,7 @@ export const appRouter = router({
       }),
   }),
 
-  settings: router({
-    // Get API key (masked)
-    getApiKey: protectedProcedure
-      .query(async ({ ctx }) => {
-        const key = await getSetting(ctx.user.id, "anthropic_api_key");
-        if (!key) return null;
-        // Return masked key
-        return key.substring(0, 7) + "..." + key.substring(key.length - 4);
-      }),
-
-    // Save API key
-    setApiKey: protectedProcedure
-      .input(z.object({ apiKey: z.string() }))
-      .mutation(async ({ ctx, input }) => {
-        await setSetting(ctx.user.id, "anthropic_api_key", input.apiKey);
-        return { success: true };
-      }),
-
-    // Get full API key (for internal use)
-    getFullApiKey: protectedProcedure
-      .query(async ({ ctx }) => {
-        return await getSetting(ctx.user.id, "anthropic_api_key");
-      }),
-  }),
+  settings: router({}),
 
   // Admin-only routes
   admin: router({
