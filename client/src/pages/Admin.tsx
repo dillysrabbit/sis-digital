@@ -522,12 +522,13 @@ export default function Admin() {
                         className="min-h-[300px] font-mono text-sm"
                       />
 
-                      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2 pt-4 border-t">
+                      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 pt-4 border-t">
                         <Button
+                          type="button"
                           variant="outline"
                           onClick={handlePlanReset}
                           disabled={isResettingPlanPrompt}
-                          className="w-full sm:w-auto"
+                          className="w-full sm:w-auto min-h-[44px] touch-manipulation"
                         >
                           {isResettingPlanPrompt ? (
                             <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -538,9 +539,10 @@ export default function Admin() {
                         </Button>
 
                         <Button
+                          type="button"
                           onClick={handlePlanSave}
                           disabled={isSavingPlanPrompt}
-                          className="w-full sm:w-auto"
+                          className="w-full sm:w-auto min-h-[44px] touch-manipulation"
                         >
                           {isSavingPlanPrompt ? (
                             <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -657,12 +659,13 @@ export default function Admin() {
                         className="min-h-[300px] font-mono text-sm"
                       />
 
-                      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2 pt-4 border-t">
+                      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 pt-4 border-t">
                         <Button
+                          type="button"
                           variant="outline"
                           onClick={handleCheckReset}
                           disabled={isResettingCheckPrompt}
-                          className="w-full sm:w-auto"
+                          className="w-full sm:w-auto min-h-[44px] touch-manipulation"
                         >
                           {isResettingCheckPrompt ? (
                             <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -673,9 +676,10 @@ export default function Admin() {
                         </Button>
 
                         <Button
+                          type="button"
                           onClick={handleCheckSave}
                           disabled={isSavingCheckPrompt}
-                          className="w-full sm:w-auto"
+                          className="w-full sm:w-auto min-h-[44px] touch-manipulation"
                         >
                           {isSavingCheckPrompt ? (
                             <Loader2 className="mr-2 h-4 w-4 animate-spin" />

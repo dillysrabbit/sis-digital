@@ -173,25 +173,45 @@ Gib Tipps zur Verbesserung der Dokumentationsqualität.`,
 
 async function getDb() {
   if (!process.env.DATABASE_URL) return null;
-  const pg = (await import("postgres")).default;
-  return pg(process.env.DATABASE_URL, { ssl: "prefer" });
+  try {
+    const pg = (await import("postgres")).default;
+    const sql = pg(process.env.DATABASE_URL, {
+      ssl: { rejectUnauthorized: false },
+      connect_timeout: 10,
+      idle_timeout: 10,
+      max: 1,
+    });
+    // Test the connection
+    await sql`SELECT 1`;
+    return sql;
+  } catch (err) {
+    console.error("DB connection failed:", err.message, err.code);
+    return null;
+  }
 }
 
 async function getSetting(sql, key) {
   try {
     const rows = await sql`SELECT "settingValue" FROM global_settings WHERE "settingKey" = ${key}`;
     return rows.length > 0 ? rows[0].settingValue : null;
-  } catch {
+  } catch (err) {
+    console.error("getSetting failed:", key, err.message);
     return null;
   }
 }
 
 async function setSetting(sql, key, value) {
-  const existing = await sql`SELECT id FROM global_settings WHERE "settingKey" = ${key}`;
-  if (existing.length > 0) {
-    await sql`UPDATE global_settings SET "settingValue" = ${value}, "updatedAt" = NOW() WHERE "settingKey" = ${key}`;
-  } else {
-    await sql`INSERT INTO global_settings ("settingKey", "settingValue", "createdAt", "updatedAt") VALUES (${key}, ${value}, NOW(), NOW())`;
+  try {
+    const existing = await sql`SELECT id FROM global_settings WHERE "settingKey" = ${key}`;
+    if (existing.length > 0) {
+      await sql`UPDATE global_settings SET "settingValue" = ${value}, "updatedAt" = NOW() WHERE "settingKey" = ${key}`;
+    } else {
+      await sql`INSERT INTO global_settings ("settingKey", "settingValue", "createdAt", "updatedAt") VALUES (${key}, ${value}, NOW(), NOW())`;
+    }
+    return true;
+  } catch (err) {
+    console.error("setSetting failed:", key, err.message, err.code);
+    throw err;
   }
 }
 
@@ -255,7 +275,8 @@ export default async function handler(req, res) {
     // DB-dependent operations
     const sql = await getDb();
     if (!sql) {
-      return res.status(500).json({ error: "Keine Datenbankverbindung" });
+      console.error("DB connection returned null. DATABASE_URL set:", !!process.env.DATABASE_URL);
+      return res.status(500).json({ error: "Keine Datenbankverbindung. Bitte DATABASE_URL prüfen." });
     }
 
     try {
@@ -319,7 +340,7 @@ export default async function handler(req, res) {
       await sql.end();
     }
   } catch (err) {
-    console.error("Admin settings error:", err);
-    return res.status(500).json({ error: "Server error" });
+    console.error("Admin settings error:", err.message, err.stack);
+    return res.status(500).json({ error: err.message || "Server error" });
   }
 }
