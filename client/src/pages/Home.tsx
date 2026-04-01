@@ -20,33 +20,7 @@ import {
 
 function CaritasLogo({ className }: { className?: string }) {
   return (
-    <svg viewBox="0 0 120 120" className={className} xmlns="http://www.w3.org/2000/svg">
-      {/* Red square background */}
-      <rect x="0" y="0" width="100" height="100" rx="4" fill="#E2001A" />
-      {/* White cross */}
-      <rect x="30" y="8" width="40" height="84" fill="white" />
-      <rect x="8" y="30" width="84" height="40" fill="white" />
-      {/* Top-left flame */}
-      <path d="M28 28C28 28 20 20 14 22C14 22 18 14 28 10C28 10 22 18 28 28Z" fill="#E2001A" />
-      <path d="M28 10C28 10 24 18 26 24C26 24 20 16 18 12C18 12 22 8 28 10Z" fill="#E2001A" />
-      <path d="M10 28C10 28 18 24 24 26C24 26 16 20 12 18C12 18 8 22 10 28Z" fill="#E2001A" />
-      {/* Top-right flame */}
-      <path d="M72 28C72 28 80 20 86 22C86 22 82 14 72 10C72 10 78 18 72 28Z" fill="#E2001A" />
-      <path d="M72 10C72 10 76 18 74 24C74 24 80 16 82 12C82 12 78 8 72 10Z" fill="#E2001A" />
-      <path d="M90 28C90 28 82 24 76 26C76 26 84 20 88 18C88 18 92 22 90 28Z" fill="#E2001A" />
-      {/* Bottom-left flame */}
-      <path d="M28 72C28 72 20 80 14 78C14 78 18 86 28 90C28 90 22 82 28 72Z" fill="#E2001A" />
-      <path d="M28 90C28 90 24 82 26 76C26 76 20 84 18 88C18 88 22 92 28 90Z" fill="#E2001A" />
-      <path d="M10 72C10 72 18 76 24 74C24 74 16 80 12 82C12 82 8 78 10 72Z" fill="#E2001A" />
-      {/* Bottom-right flame */}
-      <path d="M72 72C72 72 80 80 86 78C86 78 82 86 72 90C72 90 78 82 72 72Z" fill="#E2001A" />
-      <path d="M72 90C72 90 76 82 74 76C74 76 80 84 82 88C82 88 78 92 72 90Z" fill="#E2001A" />
-      <path d="M90 72C90 72 82 76 76 74C76 74 84 80 88 82C88 82 92 78 90 72Z" fill="#E2001A" />
-      {/* "caritas" text at bottom */}
-      <text x="50" y="115" textAnchor="middle" fill="#E2001A" fontSize="14" fontWeight="bold" fontFamily="serif" fontStyle="italic">
-        caritas
-      </text>
-    </svg>
+    <img src="/Caritas_Logo.png" alt="Caritas Logo" className={className} />
   );
 }
 
