@@ -517,6 +517,7 @@ export default function Admin() {
                       <Textarea
                         value={planPrompt}
                         onChange={(e) => handlePlanPromptChange(e.target.value)}
+                        onInput={(e) => handlePlanPromptChange((e.target as HTMLTextAreaElement).value)}
                         placeholder="Geben Sie hier den Systemprompt ein..."
                         className="min-h-[300px] font-mono text-sm"
                       />
@@ -538,7 +539,7 @@ export default function Admin() {
 
                         <Button
                           onClick={handlePlanSave}
-                          disabled={!planHasChanges || isSavingPlanPrompt}
+                          disabled={isSavingPlanPrompt}
                           className="w-full sm:w-auto"
                         >
                           {isSavingPlanPrompt ? (
@@ -651,6 +652,7 @@ export default function Admin() {
                       <Textarea
                         value={checkPrompt}
                         onChange={(e) => handleCheckPromptChange(e.target.value)}
+                        onInput={(e) => handleCheckPromptChange((e.target as HTMLTextAreaElement).value)}
                         placeholder="Geben Sie hier den Systemprompt ein..."
                         className="min-h-[300px] font-mono text-sm"
                       />
@@ -672,7 +674,7 @@ export default function Admin() {
 
                         <Button
                           onClick={handleCheckSave}
-                          disabled={!checkHasChanges || isSavingCheckPrompt}
+                          disabled={isSavingCheckPrompt}
                           className="w-full sm:w-auto"
                         >
                           {isSavingCheckPrompt ? (
