@@ -6,6 +6,9 @@ import { createExpressMiddleware } from "@trpc/server/adapters/express";
 import { registerOAuthRoutes } from "./oauth";
 import { appRouter } from "../routers";
 import { createContext } from "./context";
+import { sdk } from "./sdk";
+import { getSessionCookieOptions } from "./cookies";
+import { COOKIE_NAME } from "../../shared/const";
 import { serveStatic, setupVite } from "./vite";
 
 function isPortAvailable(port: number): Promise<boolean> {
@@ -76,6 +79,22 @@ async function startServer() {
       res.status(500).json({ error: "Internal server error" });
     }
   });
+  // REST auth endpoints (used by useAuth hook)
+  app.get("/api/auth/me", async (req, res) => {
+    try {
+      const user = await sdk.authenticateRequest(req);
+      res.json({ user });
+    } catch {
+      res.json({ user: null });
+    }
+  });
+
+  app.post("/api/auth/logout", (req, res) => {
+    const cookieOptions = getSessionCookieOptions(req);
+    res.clearCookie(COOKIE_NAME, { ...cookieOptions, maxAge: -1 });
+    res.json({ success: true });
+  });
+
   // tRPC API
   app.use(
     "/api/trpc",
