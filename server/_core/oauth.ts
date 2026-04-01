@@ -2,7 +2,6 @@ import { COOKIE_NAME, ONE_YEAR_MS } from "@shared/const";
 import type { Express, Request, Response } from "express";
 import * as db from "../db";
 import { getSessionCookieOptions } from "./cookies";
-import { ENV } from "./env";
 import { sdk } from "./sdk";
 
 // ============ Google OAuth ============
@@ -10,7 +9,7 @@ import { sdk } from "./sdk";
 function getGoogleAuthUrl(req: Request): string {
   const redirectUri = `${getOrigin(req)}/api/auth/google/callback`;
   const params = new URLSearchParams({
-    client_id: ENV.googleClientId,
+    client_id: process.env.GOOGLE_CLIENT_ID || "",
     redirect_uri: redirectUri,
     response_type: "code",
     scope: "openid email profile",
@@ -26,8 +25,8 @@ async function exchangeGoogleCode(code: string, redirectUri: string) {
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
     body: new URLSearchParams({
       code,
-      client_id: ENV.googleClientId,
-      client_secret: ENV.googleClientSecret,
+      client_id: process.env.GOOGLE_CLIENT_ID,
+      client_secret: process.env.GOOGLE_CLIENT_SECRET || "",
       redirect_uri: redirectUri,
       grant_type: "authorization_code",
     }),
@@ -49,7 +48,7 @@ async function getGoogleUserInfo(accessToken: string) {
 function getGitHubAuthUrl(req: Request): string {
   const redirectUri = `${getOrigin(req)}/api/auth/github/callback`;
   const params = new URLSearchParams({
-    client_id: ENV.githubClientId,
+    client_id: process.env.GITHUB_CLIENT_ID || "",
     redirect_uri: redirectUri,
     scope: "user:email",
   });
@@ -64,8 +63,8 @@ async function exchangeGitHubCode(code: string, redirectUri: string) {
       Accept: "application/json",
     },
     body: JSON.stringify({
-      client_id: ENV.githubClientId,
-      client_secret: ENV.githubClientSecret,
+      client_id: process.env.GITHUB_CLIENT_ID || "",
+      client_secret: process.env.GITHUB_CLIENT_SECRET || "",
       code,
       redirect_uri: redirectUri,
     }),
@@ -137,7 +136,7 @@ async function handleOAuthCallback(
 export function registerOAuthRoutes(app: Express) {
   // Google OAuth
   app.get("/api/auth/google", (req, res) => {
-    if (!ENV.googleClientId) {
+    if (!process.env.GOOGLE_CLIENT_ID) {
       return res.status(500).json({ error: "Google OAuth not configured" });
     }
     res.redirect(302, getGoogleAuthUrl(req));
@@ -160,7 +159,7 @@ export function registerOAuthRoutes(app: Express) {
 
   // GitHub OAuth
   app.get("/api/auth/github", (req, res) => {
-    if (!ENV.githubClientId) {
+    if (!process.env.GITHUB_CLIENT_ID || "") {
       return res.status(500).json({ error: "GitHub OAuth not configured" });
     }
     res.redirect(302, getGitHubAuthUrl(req));
@@ -184,8 +183,8 @@ export function registerOAuthRoutes(app: Express) {
   // Auth status (which providers are configured)
   app.get("/api/auth/providers", (_req, res) => {
     res.json({
-      google: !!ENV.googleClientId,
-      github: !!ENV.githubClientId,
+      google: !!process.env.GOOGLE_CLIENT_ID,
+      github: !!process.env.GITHUB_CLIENT_ID,
     });
   });
 }
