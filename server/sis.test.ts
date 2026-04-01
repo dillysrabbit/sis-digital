@@ -168,28 +168,3 @@ describe("sis.delete", () => {
   });
 });
 
-describe("settings.getApiKey", () => {
-  it("returns masked API key", async () => {
-    const { ctx } = createAuthContext();
-    const caller = appRouter.createCaller(ctx);
-
-    const result = await caller.settings.getApiKey();
-
-    expect(result).toBeDefined();
-    expect(result).toContain("...");
-    expect(result?.startsWith("sk-test")).toBe(true);
-  });
-});
-
-describe("settings.setApiKey", () => {
-  it("saves API key successfully", async () => {
-    const { ctx } = createAuthContext();
-    const caller = appRouter.createCaller(ctx);
-
-    const result = await caller.settings.setApiKey({
-      apiKey: "sk-new-test-key-67890",
-    });
-
-    expect(result).toEqual({ success: true });
-  });
-});

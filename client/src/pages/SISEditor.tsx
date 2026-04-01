@@ -3,7 +3,7 @@ import { useParams, useLocation } from "wouter";
 import { trpc } from "@/lib/trpc";
 import { SISForm, SISFormData } from "@/components/SISForm";
 import { MassnahmenplanDisplay } from "@/components/MassnahmenplanDisplay";
-import { ApiKeySettings } from "@/components/ApiKeySettings";
+
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
@@ -29,9 +29,6 @@ export default function SISEditor() {
     { enabled: !!entryId }
   );
 
-  // Get API key
-  const { data: apiKey, refetch: refetchApiKey } = trpc.settings.getFullApiKey.useQuery();
-  
   // Get tRPC utils for PDF export
   const utils = trpc.useUtils();
 
@@ -103,8 +100,7 @@ export default function SISEditor() {
       return;
     }
 
-    // API key is optional - server will use system key if available
-    await generatePlan.mutateAsync({ id, apiKey: apiKey || undefined });
+    await generatePlan.mutateAsync({ id });
   };
 
   const handleCheckSis = async () => {
@@ -114,8 +110,7 @@ export default function SISEditor() {
       return;
     }
 
-    // API key is optional - server will use system key if available
-    await checkSis.mutateAsync({ id, apiKey: apiKey || undefined });
+    await checkSis.mutateAsync({ id });
   };
 
   const handleExportPdf = async () => {
@@ -218,7 +213,6 @@ export default function SISEditor() {
                 )}
                 PDF exportieren
               </Button>
-              <ApiKeySettings onApiKeySaved={refetchApiKey} />
             </div>
           </div>
         </div>
