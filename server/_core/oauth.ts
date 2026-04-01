@@ -25,7 +25,7 @@ async function exchangeGoogleCode(code: string, redirectUri: string) {
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
     body: new URLSearchParams({
       code,
-      client_id: process.env.GOOGLE_CLIENT_ID,
+      client_id: process.env.GOOGLE_CLIENT_ID || "",
       client_secret: process.env.GOOGLE_CLIENT_SECRET || "",
       redirect_uri: redirectUri,
       grant_type: "authorization_code",
@@ -159,7 +159,7 @@ export function registerOAuthRoutes(app: Express) {
 
   // GitHub OAuth
   app.get("/api/auth/github", (req, res) => {
-    if (!process.env.GITHUB_CLIENT_ID || "") {
+    if (!process.env.GITHUB_CLIENT_ID) {
       return res.status(500).json({ error: "GitHub OAuth not configured" });
     }
     res.redirect(302, getGitHubAuthUrl(req));
