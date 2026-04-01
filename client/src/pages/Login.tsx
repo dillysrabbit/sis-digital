@@ -7,7 +7,7 @@ import { Loader2 } from "lucide-react";
 
 function CaritasLogo({ className }: { className?: string }) {
   return (
-    <img src="/Caritas_Logo.png" alt="Caritas Logo" className={className} />
+    <img src="/Caritas_Logo.png" alt="Caritas Logo" className={`object-contain ${className ?? ""}`} />
   );
 }
 
@@ -62,7 +62,7 @@ export default function Login() {
       <Card className="w-full max-w-sm">
         <CardHeader className="text-center space-y-4">
           <div className="flex justify-center">
-            <CaritasLogo className="h-20 w-20" />
+            <CaritasLogo className="w-48" />
           </div>
           <div>
             <CardTitle className="text-2xl">Caritas SIS Digital</CardTitle>

@@ -20,7 +20,7 @@ import {
 
 function CaritasLogo({ className }: { className?: string }) {
   return (
-    <img src="/Caritas_Logo.png" alt="Caritas Logo" className={className} />
+    <img src="/Caritas_Logo.png" alt="Caritas Logo" className={`object-contain ${className ?? ""}`} />
   );
 }
 
@@ -65,7 +65,7 @@ export default function Home() {
               Caritas Pflegedokumentation
             </div>
             <div className="flex items-center justify-center gap-4 mb-6">
-              <CaritasLogo className="h-16 w-16" />
+              <CaritasLogo className="w-48" />
               <h1 className="text-4xl md:text-5xl font-bold text-gray-900">
                 SIS Digital
               </h1>
@@ -128,7 +128,7 @@ export default function Home() {
         <div className="container py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <CaritasLogo className="h-7 w-7" />
+              <CaritasLogo className="w-24" />
               <h1 className="text-xl font-semibold">Caritas SIS Digital</h1>
             </div>
             <div className="flex items-center gap-4">
