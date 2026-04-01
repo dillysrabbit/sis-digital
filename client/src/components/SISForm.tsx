@@ -239,9 +239,9 @@ export function SISForm({ initialData, onSave, onGeneratePlan, onCheckSis, isSav
       </Card>
 
       {/* Pflegerelevante Diagnosen */}
-      <Card className="card-flush border-l-4 border-l-blue-500">
-        <CardHeader className="bg-blue-500 text-white py-3">
-          <CardTitle className="text-base font-semibold flex items-center justify-between">
+      <div className="rounded-xl border border-l-4 border-l-blue-500 shadow-sm bg-card text-card-foreground">
+        <div className="bg-blue-500 text-white py-3 px-6 rounded-t-xl">
+          <div className="text-base font-semibold flex items-center justify-between">
             <span>Pflegerelevante Diagnosen</span>
             <Button
               type="button"
@@ -255,9 +255,9 @@ export function SISForm({ initialData, onSave, onGeneratePlan, onCheckSis, isSav
             >
               + Diagnose hinzufügen
             </Button>
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="pt-4 space-y-4">
+          </div>
+        </div>
+        <div className="px-6 py-4 space-y-4">
           {formData.diagnosen.length === 0 ? (
             <p className="text-muted-foreground text-sm italic">
               Keine Diagnosen erfasst. Klicken Sie auf "+ Diagnose hinzufügen", um eine neue Diagnose hinzuzufügen.
@@ -318,39 +318,39 @@ export function SISForm({ initialData, onSave, onGeneratePlan, onCheckSis, isSav
               </Card>
             ))
           )}
-        </CardContent>
-      </Card>
+        </div>
+      </div>
 
       {/* Feld A - O-Ton */}
-      <Card className="card-flush border-l-4 border-l-[var(--sis-oton)]]">
-        <CardHeader className="sis-oton text-white py-3">
-          <CardTitle className="text-base font-semibold">
+      <div className="rounded-xl border border-l-4 border-l-[var(--sis-oton)] shadow-sm bg-card text-card-foreground">
+        <div className="sis-oton text-white py-3 px-6 rounded-t-xl">
+          <div className="text-base font-semibold">
             Was bewegt Sie im Augenblick? Was brauchen Sie? Was können wir für Sie tun?
-          </CardTitle>
-        </CardHeader>
-          <CardContent className="pt-4 space-y-2">
-            <div className="flex justify-end">
-              <TextBlockButton
-                category="oTon"
-                onSelect={(content) => updateField("oTon", formData.oTon + (formData.oTon ? "\n\n" : "") + content)}
-              />
-            </div>
-            <Textarea
-              value={formData.oTon}
-              onChange={(e) => updateField("oTon", e.target.value)}
-              placeholder="Erfassen Sie hier die Perspektive und Wünsche der pflegebedürftigen Person in deren eigenen Worten..."
-              className="min-h-[150px]"
+          </div>
+        </div>
+        <div className="px-6 py-4 space-y-2">
+          <div className="flex justify-end">
+            <TextBlockButton
+              category="oTon"
+              onSelect={(content) => updateField("oTon", formData.oTon + (formData.oTon ? "\n\n" : "") + content)}
             />
-          </CardContent>
-      </Card>
+          </div>
+          <Textarea
+            value={formData.oTon}
+            onChange={(e) => updateField("oTon", e.target.value)}
+            placeholder="Erfassen Sie hier die Perspektive und Wünsche der pflegebedürftigen Person in deren eigenen Worten..."
+            className="min-h-[150px]"
+          />
+        </div>
+      </div>
 
       {/* Themenfelder */}
       {themenfelder.map((tf) => (
-        <Card key={tf.key} className={`card-flush border-l-4`} style={{ borderLeftColor: `var(--${tf.color.replace("sis-", "sis-")})` }}>
-          <CardHeader className={`${tf.color} ${tf.textColor} py-3`}>
-            <CardTitle className="text-base font-semibold">{tf.label}</CardTitle>
-          </CardHeader>
-          <CardContent className="pt-4 space-y-2">
+        <div key={tf.key} className="rounded-xl border border-l-4 shadow-sm bg-card text-card-foreground" style={{ borderLeftColor: `var(--${tf.color.replace("sis-", "sis-")})` }}>
+          <div className={`${tf.color} ${tf.textColor} py-3 px-6 rounded-t-xl`}>
+            <div className="text-base font-semibold">{tf.label}</div>
+          </div>
+          <div className="px-6 py-4 space-y-2">
             <div className="flex justify-end">
               <TextBlockButton
                 category={tf.key}
@@ -366,8 +366,8 @@ export function SISForm({ initialData, onSave, onGeneratePlan, onCheckSis, isSav
               placeholder={`Pflegefachliche Einschätzung zu ${tf.label}...`}
               className="min-h-[120px]"
             />
-          </CardContent>
-        </Card>
+          </div>
+        </div>
       ))}
 
       {/* Risikomatrix */}
