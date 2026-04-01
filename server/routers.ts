@@ -6,6 +6,7 @@ import { z } from "zod";
 import { createSisEntry, updateSisEntry, getSisEntry, listSisEntries, deleteSisEntry, getGlobalSetting, setGlobalSetting, getAllTextBlocks, getTextBlocksByCategory, getTextBlockById, createTextBlock, updateTextBlock, deleteTextBlock, savePlanVersion, getPlanVersions, getPlanVersion, promoteUserToAdmin } from "./db";
 import { TRPCError } from "@trpc/server";
 import { generateSisPdfHtml } from "./pdfGenerator";
+import { ENV } from "./_core/env";
 
 // Verfügbare Claude Modelle
 const AVAILABLE_MODELS = [
@@ -457,6 +458,17 @@ export const appRouter = router({
     isAdmin: protectedProcedure
       .query(({ ctx }) => {
         return ctx.user.role === "admin";
+      }),
+
+    // Verify admin password and promote user to admin
+    verifyAdminPassword: protectedProcedure
+      .input(z.object({ password: z.string() }))
+      .mutation(async ({ ctx, input }) => {
+        if (input.password !== ENV.adminPassword) {
+          throw new TRPCError({ code: "FORBIDDEN", message: "Falsches Passwort" });
+        }
+        await promoteUserToAdmin(ctx.user.id);
+        return { success: true };
       }),
 
     // TEMPORARY: Promote current user to admin (remove after use)

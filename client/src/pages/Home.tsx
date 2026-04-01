@@ -4,8 +4,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { trpc } from "@/lib/trpc";
 import { getLoginUrl } from "@/const";
 import { useLocation } from "wouter";
-import { Plus, FileText, Trash2, Edit, Calendar, User, Loader2, LogIn, LogOut, ClipboardList, Shield, Heart } from "lucide-react";
+import { Plus, FileText, Trash2, Edit, Calendar, User, Loader2, LogIn, LogOut, ClipboardList, Shield, Heart, Lock } from "lucide-react";
 import { toast } from "sonner";
+import { useState } from "react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -17,6 +18,15 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
 
 function CaritasLogo({ className }: { className?: string }) {
   return (
@@ -32,9 +42,41 @@ export default function Home() {
     enabled: isAuthenticated,
   });
 
-  const { data: isAdmin } = trpc.admin.isAdmin.useQuery(undefined, {
+  const { data: isAdmin, refetch: refetchAdmin } = trpc.admin.isAdmin.useQuery(undefined, {
     enabled: isAuthenticated,
   });
+
+  const [showPasswordDialog, setShowPasswordDialog] = useState(false);
+  const [adminPassword, setAdminPassword] = useState("");
+
+  const verifyPassword = trpc.admin.verifyAdminPassword.useMutation({
+    onSuccess: () => {
+      setShowPasswordDialog(false);
+      setAdminPassword("");
+      refetchAdmin();
+      setLocation("/admin");
+      toast.success("Adminzugang gewährt");
+    },
+    onError: (error) => {
+      toast.error(error.message);
+    },
+  });
+
+  const handleAdminClick = () => {
+    if (isAdmin) {
+      setLocation("/admin");
+    } else {
+      setShowPasswordDialog(false);
+      setAdminPassword("");
+      // Use setTimeout to avoid React batching issues with dialog state
+      setTimeout(() => setShowPasswordDialog(true), 0);
+    }
+  };
+
+  const handlePasswordSubmit = () => {
+    if (!adminPassword.trim()) return;
+    verifyPassword.mutate({ password: adminPassword });
+  };
 
   const deleteEntry = trpc.sis.delete.useMutation({
     onSuccess: () => {
@@ -135,12 +177,10 @@ export default function Home() {
               <span className="text-sm text-muted-foreground">
                 Angemeldet als {user?.name || user?.email || "Benutzer"}
               </span>
-              {isAdmin && (
-                <Button variant="outline" onClick={() => setLocation("/admin")} className="gap-2">
-                  <Shield className="h-4 w-4" />
-                  Admin
-                </Button>
-              )}
+              <Button variant="outline" onClick={handleAdminClick} className="gap-2">
+                {isAdmin ? <Shield className="h-4 w-4" /> : <Lock className="h-4 w-4" />}
+                Admin
+              </Button>
               <Button onClick={() => setLocation("/sis/new")} className="gap-2">
                 <Plus className="h-4 w-4" />
                 Neue SIS
@@ -255,6 +295,39 @@ export default function Home() {
           </Card>
         )}
       </main>
+
+      {/* Admin Password Dialog */}
+      <Dialog open={showPasswordDialog} onOpenChange={setShowPasswordDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Shield className="h-5 w-5" />
+              Adminbereich
+            </DialogTitle>
+            <DialogDescription>
+              Bitte geben Sie das Admin-Passwort ein, um auf den Adminbereich zuzugreifen.
+            </DialogDescription>
+          </DialogHeader>
+          <form onSubmit={(e) => { e.preventDefault(); handlePasswordSubmit(); }}>
+            <Input
+              type="password"
+              placeholder="Admin-Passwort"
+              value={adminPassword}
+              onChange={(e) => setAdminPassword(e.target.value)}
+              autoFocus
+            />
+            <DialogFooter className="mt-4">
+              <Button type="button" variant="outline" onClick={() => setShowPasswordDialog(false)}>
+                Abbrechen
+              </Button>
+              <Button type="submit" disabled={!adminPassword.trim() || verifyPassword.isPending} className="gap-2">
+                {verifyPassword.isPending && <Loader2 className="h-4 w-4 animate-spin" />}
+                Bestätigen
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
