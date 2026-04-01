@@ -92,7 +92,7 @@ export default function Home() {
               Erfassen Sie pflegerelevante Informationen digital und generieren Sie
               individuelle Maßnahmenpläne mit KI-Unterstützung.
             </p>
-            <Button size="lg" onClick={() => window.location.href = getLoginUrl()} className="gap-2">
+            <Button size="lg" onClick={() => setLocation("/login")} className="gap-2">
               <LogIn className="h-5 w-5" />
               Anmelden um zu starten
             </Button>
