@@ -5,17 +5,9 @@ import { SISForm, SISFormData } from "@/components/SISForm";
 import { MassnahmenplanDisplay } from "@/components/MassnahmenplanDisplay";
 
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
-import { ArrowLeft, Loader2, FileCheck, ClipboardCheck, FileDown, Cpu } from "lucide-react";
-
-const MODELS = [
-  { id: "claude-sonnet-4-6", name: "Sonnet 4.6", description: "Schnell & leistungsstark" },
-  { id: "claude-opus-4-6", name: "Opus 4.6", description: "Höchste Qualität" },
-  { id: "claude-haiku-4-5-20251001", name: "Haiku 4.5", description: "Schnell & günstig" },
-];
+import { ArrowLeft, Loader2, FileCheck, ClipboardCheck, FileDown } from "lucide-react";
 
 export default function SISEditor() {
   const params = useParams<{ id?: string }>();
@@ -30,8 +22,6 @@ export default function SISEditor() {
   const [isExporting, setIsExporting] = useState(false);
   const [isEditingPlan, setIsEditingPlan] = useState(false);
   const [isEditingCheck, setIsEditingCheck] = useState(false);
-  const [planModel, setPlanModel] = useState("claude-sonnet-4-6");
-  const [checkModel, setCheckModel] = useState("claude-sonnet-4-6");
 
   // Fetch existing entry if editing
   const { data: existingEntry, isLoading: isLoadingEntry, refetch: refetchEntry } = trpc.sis.get.useQuery(
@@ -110,7 +100,7 @@ export default function SISEditor() {
       return;
     }
 
-    await generatePlan.mutateAsync({ id, model: planModel });
+    await generatePlan.mutateAsync({ id });
   };
 
   const handleCheckSis = async () => {
@@ -120,7 +110,7 @@ export default function SISEditor() {
       return;
     }
 
-    await checkSis.mutateAsync({ id, model: checkModel });
+    await checkSis.mutateAsync({ id });
   };
 
   const handleExportPdf = async () => {
@@ -243,46 +233,6 @@ export default function SISEditor() {
               isChecking={checkSis.isPending}
             />
           </div>
-
-          {/* Model Selection */}
-          <Card>
-            <CardContent className="py-4">
-              <div className="flex flex-wrap items-center gap-6">
-                <div className="flex items-center gap-2">
-                  <Cpu className="h-4 w-4 text-green-600" />
-                  <span className="text-sm font-medium">Maßnahmenplan:</span>
-                  <Select value={planModel} onValueChange={setPlanModel}>
-                    <SelectTrigger className="w-[200px] h-8">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {MODELS.map((m) => (
-                        <SelectItem key={m.id} value={m.id}>
-                          {m.name} — {m.description}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Cpu className="h-4 w-4 text-orange-600" />
-                  <span className="text-sm font-medium">SIS-Prüfung:</span>
-                  <Select value={checkModel} onValueChange={setCheckModel}>
-                    <SelectTrigger className="w-[200px] h-8">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {MODELS.map((m) => (
-                        <SelectItem key={m.id} value={m.id}>
-                          {m.name} — {m.description}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
 
           {/* Results Panel */}
           <div>
