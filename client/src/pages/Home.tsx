@@ -168,27 +168,32 @@ export default function Home() {
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
       <header className="bg-white border-b">
-        <div className="container py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <CaritasLogo className="w-24" />
-              <h1 className="text-xl font-semibold">Caritas SIS Digital</h1>
+        <div className="container py-3 md:py-4">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div className="flex items-center gap-2 md:gap-3">
+              <CaritasLogo className="w-16 md:w-24" />
+              <div>
+                <h1 className="text-base md:text-xl font-semibold leading-tight">Caritas SIS Digital</h1>
+                <span className="text-xs text-muted-foreground md:hidden">
+                  {user?.name || user?.email || "Benutzer"}
+                </span>
+              </div>
             </div>
-            <div className="flex items-center gap-4">
-              <span className="text-sm text-muted-foreground">
+            <div className="flex items-center gap-2 md:gap-4">
+              <span className="hidden md:inline text-sm text-muted-foreground">
                 Angemeldet als {user?.name || user?.email || "Benutzer"}
               </span>
-              <Button variant="outline" onClick={handleAdminClick} className="gap-2">
+              <Button variant="outline" onClick={handleAdminClick} size="sm" className="gap-1 md:gap-2 md:size-default">
                 <Lock className="h-4 w-4" />
-                Admin
+                <span className="hidden sm:inline">Admin</span>
               </Button>
-              <Button onClick={() => setLocation("/sis/new")} className="gap-2">
+              <Button onClick={() => setLocation("/sis/new")} size="sm" className="gap-1 md:gap-2 md:size-default">
                 <Plus className="h-4 w-4" />
-                Neue SIS
+                <span className="hidden sm:inline">Neue SIS</span>
               </Button>
-              <Button variant="outline" onClick={logout} className="gap-2 text-destructive hover:text-destructive">
+              <Button variant="outline" onClick={logout} size="sm" className="gap-1 md:gap-2 md:size-default text-destructive hover:text-destructive">
                 <LogOut className="h-4 w-4" />
-                Abmelden
+                <span className="hidden sm:inline">Abmelden</span>
               </Button>
             </div>
           </div>
