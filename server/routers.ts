@@ -324,6 +324,7 @@ export const appRouter = router({
     generatePlan: protectedProcedure
       .input(z.object({
         id: z.number(),
+        model: z.string().optional(),
       }))
       .mutation(async ({ ctx, input }) => {
         const entry = await getSisEntry(input.id, ctx.user.id);
@@ -342,8 +343,9 @@ export const appRouter = router({
         // Get custom system prompt or use default
         const systemPrompt = await getGlobalSetting("system_prompt") || DEFAULT_SYSTEM_PROMPT;
 
-        // Get selected model or use default
-        const selectedModel = await getGlobalSetting("anthropic_model") || DEFAULT_MODEL;
+        // Get selected model: prefer user-chosen, then admin default, then hardcoded default
+        const adminModel = await getGlobalSetting("anthropic_model");
+        const selectedModel = input.model || adminModel || DEFAULT_MODEL;
 
         // Call Anthropic Messages API
         const response = await fetch("https://api.anthropic.com/v1/messages", {
@@ -392,6 +394,7 @@ export const appRouter = router({
     checkSis: protectedProcedure
       .input(z.object({
         id: z.number(),
+        model: z.string().optional(),
       }))
       .mutation(async ({ ctx, input }) => {
         const entry = await getSisEntry(input.id, ctx.user.id);
@@ -410,8 +413,9 @@ export const appRouter = router({
         // Get custom system prompt for checking or use default
         const systemPrompt = await getGlobalSetting("check_system_prompt") || DEFAULT_CHECK_PROMPT;
 
-        // Get selected model for checking or use default
-        const selectedModel = await getGlobalSetting("check_anthropic_model") || DEFAULT_MODEL;
+        // Get selected model: prefer user-chosen, then admin default, then hardcoded default
+        const adminModel = await getGlobalSetting("check_anthropic_model");
+        const selectedModel = input.model || adminModel || DEFAULT_MODEL;
 
         // Call Anthropic Messages API
         const response = await fetch("https://api.anthropic.com/v1/messages", {
