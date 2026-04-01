@@ -61,14 +61,21 @@ export default async function handler(req, res) {
 
     // Try to upsert user in DB (non-blocking)
     try {
-      const { upsertUser } = await import("../../../server/db.js");
-      await upsertUser({
-        openId,
-        name,
-        email,
-        loginMethod: "github",
-        lastSignedIn: new Date(),
-      });
+      if (process.env.DATABASE_URL) {
+        const pg = (await import("postgres")).default;
+        const sql = pg(process.env.DATABASE_URL);
+        await sql`
+          INSERT INTO users ("openId", name, email, "loginMethod", "lastSignedIn", role, "createdAt", "updatedAt")
+          VALUES (${openId}, ${name}, ${email}, 'github', NOW(), 'user', NOW(), NOW())
+          ON CONFLICT ("openId") DO UPDATE SET
+            name = ${name},
+            email = ${email},
+            "loginMethod" = 'github',
+            "lastSignedIn" = NOW(),
+            "updatedAt" = NOW()
+        `;
+        await sql.end();
+      }
     } catch (dbErr) {
       console.error("DB upsert failed (continuing):", dbErr);
     }

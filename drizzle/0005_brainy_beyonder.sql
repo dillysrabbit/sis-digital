@@ -1,1 +1,0 @@
-ALTER TABLE `text_blocks` MODIFY COLUMN `category` enum('mobilitaet','ernaehrung','koerperpflege','ausscheidung','kommunikation','soziales','schmerz','medikation','wundversorgung','allgemein') NOT NULL;
