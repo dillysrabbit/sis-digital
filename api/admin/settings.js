@@ -179,19 +179,20 @@ async function getDb() {
 
 async function getSetting(sql, key) {
   try {
-    const rows = await sql`SELECT value FROM global_settings WHERE key = ${key}`;
-    return rows.length > 0 ? rows[0].value : null;
+    const rows = await sql`SELECT "settingValue" FROM global_settings WHERE "settingKey" = ${key}`;
+    return rows.length > 0 ? rows[0].settingValue : null;
   } catch {
     return null;
   }
 }
 
 async function setSetting(sql, key, value) {
-  await sql`
-    INSERT INTO global_settings (key, value, "updatedAt")
-    VALUES (${key}, ${value}, NOW())
-    ON CONFLICT (key) DO UPDATE SET value = ${value}, "updatedAt" = NOW()
-  `;
+  const existing = await sql`SELECT id FROM global_settings WHERE "settingKey" = ${key}`;
+  if (existing.length > 0) {
+    await sql`UPDATE global_settings SET "settingValue" = ${value}, "updatedAt" = NOW() WHERE "settingKey" = ${key}`;
+  } else {
+    await sql`INSERT INTO global_settings ("settingKey", "settingValue", "createdAt", "updatedAt") VALUES (${key}, ${value}, NOW(), NOW())`;
+  }
 }
 
 async function authenticateAdmin(req) {
