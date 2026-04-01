@@ -187,31 +187,32 @@ export default function SISEditor() {
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
       <header className="bg-white border-b sticky top-0 z-10">
-        <div className="container py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <Button variant="ghost" size="sm" onClick={() => setLocation("/")} className="gap-2">
+        <div className="container py-3 md:py-4">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div className="flex items-center gap-2 md:gap-4">
+              <Button variant="ghost" size="sm" onClick={() => setLocation("/")} className="gap-1">
                 <ArrowLeft className="h-4 w-4" />
-                Zurück
+                <span className="hidden sm:inline">Zurück</span>
               </Button>
-              <h1 className="text-xl font-semibold">
+              <h1 className="text-base md:text-xl font-semibold">
                 {isNew ? "Neue SIS erstellen" : `SIS bearbeiten`}
               </h1>
             </div>
             <div className="flex items-center gap-2">
-              <Button 
-                variant="outline" 
-                size="sm" 
+              <Button
+                variant="outline"
+                size="sm"
                 onClick={handleExportPdf}
                 disabled={isExporting || !currentEntryId || !existingEntry}
-                className="gap-2"
+                className="gap-1 md:gap-2"
               >
                 {isExporting ? (
                   <Loader2 className="h-4 w-4 animate-spin" />
                 ) : (
                   <FileDown className="h-4 w-4" />
                 )}
-                PDF exportieren
+                <span className="hidden sm:inline">PDF exportieren</span>
+                <span className="sm:hidden">PDF</span>
               </Button>
             </div>
           </div>

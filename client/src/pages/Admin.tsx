@@ -389,21 +389,21 @@ export default function Admin() {
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
       <header className="bg-white border-b sticky top-0 z-10">
-        <div className="container py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
+        <div className="container py-3 md:py-4">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div className="flex items-center gap-2 md:gap-4">
               <Link href="/">
                 <Button variant="ghost" size="sm">
                   <ArrowLeft className="mr-2 h-4 w-4" />
-                  Zurück
+                  <span className="hidden sm:inline">Zurück</span>
                 </Button>
               </Link>
               <div className="flex items-center gap-2">
                 <Shield className="h-5 w-5 text-blue-600" />
-                <h1 className="text-xl font-semibold">Admin-Bereich</h1>
+                <h1 className="text-base md:text-xl font-semibold">Admin-Bereich</h1>
               </div>
             </div>
-            <span className="text-sm text-gray-500">
+            <span className="text-xs md:text-sm text-gray-500">
               Angemeldet als <strong>{user.name}</strong>
             </span>
           </div>
@@ -414,18 +414,18 @@ export default function Admin() {
       <main className="container py-8">
         <div className="max-w-4xl mx-auto">
           <Tabs defaultValue="massnahmenplan" className="space-y-6">
-            <TabsList className="grid w-full grid-cols-3">
-              <TabsTrigger value="massnahmenplan" className="flex items-center gap-2">
-                <FileCheck className="h-4 w-4" />
-                Maßnahmenplan
+            <TabsList className="grid w-full grid-cols-3 h-auto">
+              <TabsTrigger value="massnahmenplan" className="flex items-center gap-1 md:gap-2 text-xs md:text-sm px-2 py-1.5">
+                <FileCheck className="h-4 w-4 shrink-0" />
+                <span className="truncate">Maßnahmenplan</span>
               </TabsTrigger>
-              <TabsTrigger value="pruefung" className="flex items-center gap-2">
-                <ClipboardCheck className="h-4 w-4" />
-                SIS-Prüfung
+              <TabsTrigger value="pruefung" className="flex items-center gap-1 md:gap-2 text-xs md:text-sm px-2 py-1.5">
+                <ClipboardCheck className="h-4 w-4 shrink-0" />
+                <span className="truncate">SIS-Prüfung</span>
               </TabsTrigger>
-              <TabsTrigger value="textbausteine" className="flex items-center gap-2">
-                <FileText className="h-4 w-4" />
-                Textbausteine
+              <TabsTrigger value="textbausteine" className="flex items-center gap-1 md:gap-2 text-xs md:text-sm px-2 py-1.5">
+                <FileText className="h-4 w-4 shrink-0" />
+                <span className="truncate">Textbausteine</span>
               </TabsTrigger>
             </TabsList>
 
