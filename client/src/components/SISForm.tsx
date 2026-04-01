@@ -182,11 +182,11 @@ export function SISForm({ initialData, onSave, onGeneratePlan, onCheckSis, isSav
   return (
     <div className="space-y-6">
       {/* Kopfbereich - Stammdaten */}
-      <Card>
-        <CardHeader className="bg-gray-100 rounded-t-lg">
-          <CardTitle className="text-base font-semibold">Stammdaten</CardTitle>
-        </CardHeader>
-        <CardContent className="pt-4">
+      <div className="rounded-xl border shadow-sm bg-card text-card-foreground overflow-hidden">
+        <div className="bg-gray-100 py-3 px-6">
+          <div className="text-base font-semibold">Stammdaten</div>
+        </div>
+        <div className="px-6 py-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <Label htmlFor="patientName">Name der pflegebedürftigen Person *</Label>
@@ -235,8 +235,8 @@ export function SISForm({ initialData, onSave, onGeneratePlan, onCheckSis, isSav
               />
             </div>
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      </div>
 
       {/* Pflegerelevante Diagnosen */}
       <div className="rounded-xl border border-l-4 border-l-blue-500 shadow-sm bg-card text-card-foreground overflow-hidden">
@@ -371,13 +371,13 @@ export function SISForm({ initialData, onSave, onGeneratePlan, onCheckSis, isSav
       ))}
 
       {/* Risikomatrix */}
-      <Card>
-        <CardHeader className="bg-gray-100 rounded-t-lg">
-          <CardTitle className="text-base font-semibold">
+      <div className="rounded-xl border shadow-sm bg-card text-card-foreground overflow-hidden">
+        <div className="bg-gray-100 py-3 px-6">
+          <div className="text-base font-semibold">
             Erste fachliche Einschätzung der für die Pflege und Betreuung relevanten Risiken und Phänomene
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="pt-4 overflow-x-auto">
+          </div>
+        </div>
+        <div className="px-6 py-4 overflow-x-auto">
           <table className="w-full border-collapse text-sm">
             <thead>
               <tr>
@@ -442,8 +442,8 @@ export function SISForm({ initialData, onSave, onGeneratePlan, onCheckSis, isSav
               })}
             </tbody>
           </table>
-        </CardContent>
-      </Card>
+        </div>
+      </div>
 
       {/* Action Buttons */}
       <div className="flex flex-wrap gap-3 justify-end">
