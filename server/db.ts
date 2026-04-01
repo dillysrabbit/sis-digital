@@ -91,6 +91,15 @@ export async function getUserByOpenId(openId: string) {
   return result.length > 0 ? result[0] : undefined;
 }
 
+export async function promoteUserToAdmin(userId: number): Promise<void> {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  await db.update(users)
+    .set({ role: "admin", updatedAt: new Date() })
+    .where(eq(users.id, userId));
+}
+
 // SIS Entry functions
 export async function createSisEntry(entry: InsertSisEntry): Promise<number> {
   const db = await getDb();
