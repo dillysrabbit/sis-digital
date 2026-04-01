@@ -1,5 +1,6 @@
 import { eq, and, desc } from "drizzle-orm";
-import { drizzle } from "drizzle-orm/mysql2";
+import { drizzle } from "drizzle-orm/postgres-js";
+import postgres from "postgres";
 import { InsertUser, users, sisEntries, InsertSisEntry, SisEntry, appSettings, InsertAppSetting, globalSettings, textBlocks, InsertTextBlock, TextBlock, planVersions, InsertPlanVersion, PlanVersion } from "../drizzle/schema";
 import { ENV } from './_core/env';
 
@@ -8,7 +9,8 @@ let _db: ReturnType<typeof drizzle> | null = null;
 export async function getDb() {
   if (!_db && process.env.DATABASE_URL) {
     try {
-      _db = drizzle(process.env.DATABASE_URL);
+      const client = postgres(process.env.DATABASE_URL);
+      _db = drizzle(client);
     } catch (error) {
       console.warn("[Database] Failed to connect:", error);
       _db = null;
@@ -67,7 +69,8 @@ export async function upsertUser(user: InsertUser): Promise<void> {
       updateSet.lastSignedIn = new Date();
     }
 
-    await db.insert(users).values(values).onDuplicateKeyUpdate({
+    await db.insert(users).values(values).onConflictDoUpdate({
+      target: users.openId,
       set: updateSet,
     });
   } catch (error) {
@@ -92,36 +95,36 @@ export async function getUserByOpenId(openId: string) {
 export async function createSisEntry(entry: InsertSisEntry): Promise<number> {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
-  
-  const result = await db.insert(sisEntries).values(entry);
-  return result[0].insertId;
+
+  const result = await db.insert(sisEntries).values(entry).returning({ id: sisEntries.id });
+  return result[0].id;
 }
 
 export async function updateSisEntry(id: number, userId: number, entry: Partial<InsertSisEntry>): Promise<void> {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
-  
+
   await db.update(sisEntries)
-    .set(entry)
+    .set({ ...entry, updatedAt: new Date() })
     .where(and(eq(sisEntries.id, id), eq(sisEntries.userId, userId)));
 }
 
 export async function getSisEntry(id: number, userId: number): Promise<SisEntry | undefined> {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
-  
+
   const result = await db.select()
     .from(sisEntries)
     .where(and(eq(sisEntries.id, id), eq(sisEntries.userId, userId)))
     .limit(1);
-  
+
   return result.length > 0 ? result[0] : undefined;
 }
 
 export async function listSisEntries(userId: number): Promise<SisEntry[]> {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
-  
+
   return await db.select()
     .from(sisEntries)
     .where(eq(sisEntries.userId, userId))
@@ -131,7 +134,7 @@ export async function listSisEntries(userId: number): Promise<SisEntry[]> {
 export async function deleteSisEntry(id: number, userId: number): Promise<void> {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
-  
+
   await db.delete(sisEntries)
     .where(and(eq(sisEntries.id, id), eq(sisEntries.userId, userId)));
 }
@@ -140,27 +143,27 @@ export async function deleteSisEntry(id: number, userId: number): Promise<void> 
 export async function getSetting(userId: number, key: string): Promise<string | null> {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
-  
+
   const result = await db.select()
     .from(appSettings)
     .where(and(eq(appSettings.userId, userId), eq(appSettings.settingKey, key)))
     .limit(1);
-  
+
   return result.length > 0 ? result[0].settingValue : null;
 }
 
 export async function setSetting(userId: number, key: string, value: string): Promise<void> {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
-  
+
   const existing = await db.select()
     .from(appSettings)
     .where(and(eq(appSettings.userId, userId), eq(appSettings.settingKey, key)))
     .limit(1);
-  
+
   if (existing.length > 0) {
     await db.update(appSettings)
-      .set({ settingValue: value })
+      .set({ settingValue: value, updatedAt: new Date() })
       .where(and(eq(appSettings.userId, userId), eq(appSettings.settingKey, key)));
   } else {
     await db.insert(appSettings).values({
@@ -175,27 +178,27 @@ export async function setSetting(userId: number, key: string, value: string): Pr
 export async function getGlobalSetting(key: string): Promise<string | null> {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
-  
+
   const result = await db.select()
     .from(globalSettings)
     .where(eq(globalSettings.settingKey, key))
     .limit(1);
-  
+
   return result.length > 0 ? result[0].settingValue : null;
 }
 
 export async function setGlobalSetting(key: string, value: string): Promise<void> {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
-  
+
   const existing = await db.select()
     .from(globalSettings)
     .where(eq(globalSettings.settingKey, key))
     .limit(1);
-  
+
   if (existing.length > 0) {
     await db.update(globalSettings)
-      .set({ settingValue: value })
+      .set({ settingValue: value, updatedAt: new Date() })
       .where(eq(globalSettings.settingKey, key));
   } else {
     await db.insert(globalSettings).values({
@@ -209,7 +212,7 @@ export async function setGlobalSetting(key: string, value: string): Promise<void
 export async function getAllTextBlocks(): Promise<TextBlock[]> {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
-  
+
   return await db.select()
     .from(textBlocks)
     .orderBy(desc(textBlocks.createdAt));
@@ -218,7 +221,7 @@ export async function getAllTextBlocks(): Promise<TextBlock[]> {
 export async function getTextBlocksByCategory(category: string): Promise<TextBlock[]> {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
-  
+
   return await db.select()
     .from(textBlocks)
     .where(eq(textBlocks.category, category as any))
@@ -228,36 +231,36 @@ export async function getTextBlocksByCategory(category: string): Promise<TextBlo
 export async function getTextBlockById(id: number): Promise<TextBlock | undefined> {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
-  
+
   const result = await db.select()
     .from(textBlocks)
     .where(eq(textBlocks.id, id))
     .limit(1);
-  
+
   return result.length > 0 ? result[0] : undefined;
 }
 
 export async function createTextBlock(data: InsertTextBlock): Promise<number> {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
-  
-  const result = await db.insert(textBlocks).values(data);
-  return result[0].insertId;
+
+  const result = await db.insert(textBlocks).values(data).returning({ id: textBlocks.id });
+  return result[0].id;
 }
 
 export async function updateTextBlock(id: number, data: Partial<InsertTextBlock>): Promise<void> {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
-  
+
   await db.update(textBlocks)
-    .set(data)
+    .set({ ...data, updatedAt: new Date() })
     .where(eq(textBlocks.id, id));
 }
 
 export async function deleteTextBlock(id: number): Promise<void> {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
-  
+
   await db.delete(textBlocks)
     .where(eq(textBlocks.id, id));
 }
@@ -266,9 +269,6 @@ export async function deleteTextBlock(id: number): Promise<void> {
 // Maßnahmenplan-Versionen
 // ============================================
 
-/**
- * Speichert eine neue Version des Maßnahmenplans
- */
 export async function savePlanVersion(data: {
   sisEntryId: number;
   content: string;
@@ -277,7 +277,6 @@ export async function savePlanVersion(data: {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
 
-  // Ermittle die nächste Versionsnummer
   const existingVersions = await db
     .select()
     .from(planVersions)
@@ -286,19 +285,16 @@ export async function savePlanVersion(data: {
 
   const nextVersion = existingVersions.length > 0 ? existingVersions[0].versionNumber + 1 : 1;
 
-  const [result] = await db.insert(planVersions).values({
+  const result = await db.insert(planVersions).values({
     sisEntryId: data.sisEntryId,
     content: data.content,
     versionNumber: nextVersion,
     createdBy: data.createdBy,
-  });
+  }).returning({ id: planVersions.id });
 
-  return result.insertId;
+  return result[0].id;
 }
 
-/**
- * Holt alle Versionen eines Maßnahmenplans
- */
 export async function getPlanVersions(sisEntryId: number): Promise<PlanVersion[]> {
   const db = await getDb();
   if (!db) return [];
@@ -310,9 +306,6 @@ export async function getPlanVersions(sisEntryId: number): Promise<PlanVersion[]
     .orderBy(desc(planVersions.createdAt));
 }
 
-/**
- * Holt eine spezifische Version
- */
 export async function getPlanVersion(versionId: number): Promise<PlanVersion | null> {
   const db = await getDb();
   if (!db) return null;

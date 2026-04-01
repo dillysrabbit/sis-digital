@@ -1,1 +1,0 @@
-ALTER TABLE `sis_entries` ADD `diagnosen` json;
