@@ -239,7 +239,7 @@ export function SISForm({ initialData, onSave, onGeneratePlan, onCheckSis, isSav
       </Card>
 
       {/* Pflegerelevante Diagnosen */}
-      <Card className="border-l-4 border-l-blue-500 overflow-hidden !pt-0 !gap-0">
+      <Card className="border-l-4 border-l-blue-500 overflow-hidden" style={{ paddingTop: 0, gap: 0 }}>
         <CardHeader className="bg-blue-500 text-white py-3">
           <CardTitle className="text-base font-semibold flex items-center justify-between">
             <span>Pflegerelevante Diagnosen</span>
@@ -322,7 +322,7 @@ export function SISForm({ initialData, onSave, onGeneratePlan, onCheckSis, isSav
       </Card>
 
       {/* Feld A - O-Ton */}
-      <Card className="border-l-4 border-l-[var(--sis-oton)]] overflow-hidden !pt-0 !gap-0">
+      <Card className="border-l-4 border-l-[var(--sis-oton)]] overflow-hidden" style={{ paddingTop: 0, gap: 0 }}>
         <CardHeader className="sis-oton text-white py-3">
           <CardTitle className="text-base font-semibold">
             Was bewegt Sie im Augenblick? Was brauchen Sie? Was können wir für Sie tun?
@@ -346,7 +346,7 @@ export function SISForm({ initialData, onSave, onGeneratePlan, onCheckSis, isSav
 
       {/* Themenfelder */}
       {themenfelder.map((tf) => (
-        <Card key={tf.key} className={`border-l-4 overflow-hidden !pt-0 !gap-0`} style={{ borderLeftColor: `var(--${tf.color.replace("sis-", "sis-")})` }}>
+        <Card key={tf.key} className={`border-l-4 overflow-hidden`} style={{ borderLeftColor: `var(--${tf.color.replace("sis-", "sis-")})`, paddingTop: 0, gap: 0 }}>
           <CardHeader className={`${tf.color} ${tf.textColor} py-3`}>
             <CardTitle className="text-base font-semibold">{tf.label}</CardTitle>
           </CardHeader>
