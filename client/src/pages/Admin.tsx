@@ -1,13 +1,30 @@
 import { useAuth } from "@/_core/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
 import { trpc } from "@/lib/trpc";
-import { ArrowLeft, Loader2, RotateCcw, Save, Shield, AlertTriangle, Cpu, FileText, Check, ClipboardCheck, FileCheck } from "lucide-react";
+import { ArrowLeft, Loader2, RotateCcw, Save, Shield, AlertTriangle, Cpu, FileText, Check, ClipboardCheck, FileCheck, Plus, Pencil, Trash2 } from "lucide-react";
 import { useEffect, useState, useRef } from "react";
 import { Link } from "wouter";
 import { toast } from "sonner";
+
+const CATEGORY_LABELS: Record<string, string> = {
+  mobilitaet: "Mobilität und Bewegung",
+  ernaehrung: "Ernährung und Flüssigkeit",
+  koerperpflege: "Körperpflege und Hygiene",
+  ausscheidung: "Ausscheidung",
+  kommunikation: "Kommunikation und Kognition",
+  soziales: "Soziale Beziehungen",
+  schmerz: "Schmerzmanagement",
+  medikation: "Medikation",
+  wundversorgung: "Wundversorgung",
+  allgemein: "Allgemein",
+};
 
 export default function Admin() {
   const { user, loading: authLoading } = useAuth();
@@ -23,6 +40,13 @@ export default function Admin() {
   const [checkHasChanges, setCheckHasChanges] = useState(false);
   const [checkSelectedModel, setCheckSelectedModel] = useState("");
   const checkInitialPromptRef = useRef<string | null>(null);
+
+  // Textbausteine states
+  const [isTextBlockDialogOpen, setIsTextBlockDialogOpen] = useState(false);
+  const [editingBlock, setEditingBlock] = useState<any>(null);
+  const [blockTitle, setBlockTitle] = useState("");
+  const [blockContent, setBlockContent] = useState("");
+  const [blockCategory, setBlockCategory] = useState<string>("allgemein");
 
   const isAdminVerified = typeof window !== "undefined" && sessionStorage.getItem("adminVerified") === "true";
   const { data: isAdmin, isLoading: isAdminLoading } = trpc.admin.isAdmin.useQuery(undefined, {
@@ -59,6 +83,45 @@ export default function Admin() {
 
   const { data: checkTemplates } = trpc.admin.getCheckPromptTemplates.useQuery(undefined, {
     enabled: hasAdminAccess,
+  });
+
+  // Textbausteine queries
+  const { data: textBlocks, isLoading: isLoadingBlocks, refetch: refetchBlocks } = trpc.textBlocks.list.useQuery(undefined, {
+    enabled: hasAdminAccess,
+  });
+
+  const createBlockMutation = trpc.textBlocks.create.useMutation({
+    onSuccess: () => {
+      toast.success("Textbaustein erfolgreich erstellt");
+      setIsTextBlockDialogOpen(false);
+      resetBlockForm();
+      refetchBlocks();
+    },
+    onError: (error) => {
+      toast.error(`Fehler beim Erstellen: ${error.message}`);
+    },
+  });
+
+  const updateBlockMutation = trpc.textBlocks.update.useMutation({
+    onSuccess: () => {
+      toast.success("Textbaustein erfolgreich aktualisiert");
+      setIsTextBlockDialogOpen(false);
+      resetBlockForm();
+      refetchBlocks();
+    },
+    onError: (error) => {
+      toast.error(`Fehler beim Aktualisieren: ${error.message}`);
+    },
+  });
+
+  const deleteBlockMutation = trpc.textBlocks.delete.useMutation({
+    onSuccess: () => {
+      toast.success("Textbaustein erfolgreich gelöscht");
+      refetchBlocks();
+    },
+    onError: (error) => {
+      toast.error(`Fehler beim Löschen: ${error.message}`);
+    },
   });
 
   // Maßnahmenplan mutations
@@ -309,6 +372,44 @@ export default function Admin() {
     applyCheckTemplate.mutate({ templateId });
   };
 
+  // Textbausteine handlers
+  const resetBlockForm = () => {
+    setBlockTitle("");
+    setBlockContent("");
+    setBlockCategory("allgemein");
+    setEditingBlock(null);
+  };
+
+  const handleOpenBlockDialog = (block?: any) => {
+    if (block) {
+      setEditingBlock(block);
+      setBlockTitle(block.title);
+      setBlockContent(block.content);
+      setBlockCategory(block.category);
+    } else {
+      resetBlockForm();
+    }
+    setIsTextBlockDialogOpen(true);
+  };
+
+  const handleSaveBlock = () => {
+    if (!blockTitle.trim() || !blockContent.trim()) {
+      toast.error("Titel und Inhalt dürfen nicht leer sein");
+      return;
+    }
+    if (editingBlock) {
+      updateBlockMutation.mutate({ id: editingBlock.id, title: blockTitle, content: blockContent, category: blockCategory as any });
+    } else {
+      createBlockMutation.mutate({ title: blockTitle, content: blockContent, category: blockCategory as any });
+    }
+  };
+
+  const handleDeleteBlock = (id: number) => {
+    if (confirm("Möchten Sie diesen Textbaustein wirklich löschen?")) {
+      deleteBlockMutation.mutate({ id });
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
@@ -327,17 +428,9 @@ export default function Admin() {
                 <h1 className="text-xl font-semibold">Admin-Bereich</h1>
               </div>
             </div>
-            <div className="flex items-center gap-2">
-              <Link href="/admin/textblocks">
-                <Button variant="outline" size="sm">
-                  <FileText className="mr-2 h-4 w-4" />
-                  Textbausteine
-                </Button>
-              </Link>
-              <span className="text-sm text-gray-500">
-                Angemeldet als <strong>{user.name}</strong>
-              </span>
-            </div>
+            <span className="text-sm text-gray-500">
+              Angemeldet als <strong>{user.name}</strong>
+            </span>
           </div>
         </div>
       </header>
@@ -346,7 +439,7 @@ export default function Admin() {
       <main className="container py-8">
         <div className="max-w-4xl mx-auto">
           <Tabs defaultValue="massnahmenplan" className="space-y-6">
-            <TabsList className="grid w-full grid-cols-2">
+            <TabsList className="grid w-full grid-cols-3">
               <TabsTrigger value="massnahmenplan" className="flex items-center gap-2">
                 <FileCheck className="h-4 w-4" />
                 Maßnahmenplan
@@ -354,6 +447,10 @@ export default function Admin() {
               <TabsTrigger value="pruefung" className="flex items-center gap-2">
                 <ClipboardCheck className="h-4 w-4" />
                 SIS-Prüfung
+              </TabsTrigger>
+              <TabsTrigger value="textbausteine" className="flex items-center gap-2">
+                <FileText className="h-4 w-4" />
+                Textbausteine
               </TabsTrigger>
             </TabsList>
 
@@ -633,9 +730,138 @@ export default function Admin() {
                 </CardContent>
               </Card>
             </TabsContent>
+            {/* Textbausteine Tab */}
+            <TabsContent value="textbausteine" className="space-y-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h2 className="text-lg font-semibold flex items-center gap-2">
+                    <FileText className="h-5 w-5" />
+                    Textbausteine verwalten
+                  </h2>
+                  <p className="text-sm text-muted-foreground">
+                    Erstellen und verwalten Sie wiederverwendbare Textbausteine für die Themenfelder
+                  </p>
+                </div>
+                <Button onClick={() => handleOpenBlockDialog()}>
+                  <Plus className="w-4 h-4 mr-2" />
+                  Neuer Textbaustein
+                </Button>
+              </div>
+
+              {isLoadingBlocks ? (
+                <div className="flex items-center justify-center py-12">
+                  <Loader2 className="w-8 h-8 animate-spin text-primary" />
+                </div>
+              ) : (
+                <div className="grid gap-4">
+                  {textBlocks && textBlocks.length > 0 ? (
+                    textBlocks.map((block) => (
+                      <Card key={block.id}>
+                        <CardHeader>
+                          <div className="flex items-start justify-between">
+                            <div className="flex-1">
+                              <CardTitle className="text-lg">{block.title}</CardTitle>
+                              <CardDescription className="mt-1">
+                                {CATEGORY_LABELS[block.category]}
+                              </CardDescription>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <Button variant="ghost" size="sm" onClick={() => handleOpenBlockDialog(block)}>
+                                <Pencil className="w-4 h-4" />
+                              </Button>
+                              <Button variant="ghost" size="sm" onClick={() => handleDeleteBlock(block.id)} disabled={deleteBlockMutation.isPending}>
+                                <Trash2 className="w-4 h-4" />
+                              </Button>
+                            </div>
+                          </div>
+                        </CardHeader>
+                        <CardContent>
+                          <p className="text-sm text-muted-foreground whitespace-pre-wrap">
+                            {block.content}
+                          </p>
+                        </CardContent>
+                      </Card>
+                    ))
+                  ) : (
+                    <Card>
+                      <CardContent className="py-12 text-center">
+                        <FileText className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
+                        <p className="text-muted-foreground">
+                          Noch keine Textbausteine vorhanden. Erstellen Sie Ihren ersten Textbaustein.
+                        </p>
+                      </CardContent>
+                    </Card>
+                  )}
+                </div>
+              )}
+            </TabsContent>
           </Tabs>
         </div>
       </main>
+
+      {/* Textbaustein Dialog */}
+      <Dialog open={isTextBlockDialogOpen} onOpenChange={setIsTextBlockDialogOpen}>
+        <DialogContent className="max-w-2xl max-h-[90vh] flex flex-col">
+          <DialogHeader>
+            <DialogTitle>
+              {editingBlock ? "Textbaustein bearbeiten" : "Neuer Textbaustein"}
+            </DialogTitle>
+            <DialogDescription>
+              Erstellen Sie einen wiederverwendbaren Textbaustein für die Themenfelder
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4 overflow-y-auto flex-1">
+            <div className="grid gap-2">
+              <Label htmlFor="block-title">Titel</Label>
+              <Input
+                id="block-title"
+                value={blockTitle}
+                onChange={(e) => setBlockTitle(e.target.value)}
+                placeholder="z.B. Sturzrisiko - Standard"
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="block-category">Kategorie</Label>
+              <Select value={blockCategory} onValueChange={setBlockCategory}>
+                <SelectTrigger id="block-category">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {Object.entries(CATEGORY_LABELS).map(([value, label]) => (
+                    <SelectItem key={value} value={value}>
+                      {label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="block-content">Inhalt</Label>
+              <Textarea
+                id="block-content"
+                value={blockContent}
+                onChange={(e) => setBlockContent(e.target.value)}
+                placeholder="Geben Sie hier den Text ein, der in die Themenfelder eingefügt werden soll..."
+                rows={8}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsTextBlockDialogOpen(false)}>
+              Abbrechen
+            </Button>
+            <Button
+              onClick={handleSaveBlock}
+              disabled={createBlockMutation.isPending || updateBlockMutation.isPending}
+            >
+              {(createBlockMutation.isPending || updateBlockMutation.isPending) && (
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+              )}
+              Speichern
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

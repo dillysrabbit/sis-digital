@@ -8,7 +8,6 @@ import Home from "./pages/Home";
 import Login from "./pages/Login";
 import SISEditor from "./pages/SISEditor";
 import Admin from "./pages/Admin";
-import TextBlocksAdmin from "./pages/TextBlocksAdmin";
 import PrintPlan from "./pages/PrintPlan";
 
 function Router() {
@@ -20,7 +19,6 @@ function Router() {
       <Route path="/sis/:id" component={SISEditor} />
       <Route path="/print/:id" component={PrintPlan} />
       <Route path="/admin" component={Admin} />
-      <Route path="/admin/textblocks" component={TextBlocksAdmin} />
       <Route path="/404" component={NotFound} />
       <Route component={NotFound} />
     </Switch>
