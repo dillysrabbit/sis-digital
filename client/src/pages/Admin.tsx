@@ -24,38 +24,41 @@ export default function Admin() {
   const [checkSelectedModel, setCheckSelectedModel] = useState("");
   const checkInitialPromptRef = useRef<string | null>(null);
 
+  const isAdminVerified = typeof window !== "undefined" && sessionStorage.getItem("adminVerified") === "true";
   const { data: isAdmin, isLoading: isAdminLoading } = trpc.admin.isAdmin.useQuery(undefined, {
-    enabled: !!user,
+    enabled: !!user && !isAdminVerified,
+    retry: false,
   });
+  const hasAdminAccess = isAdminVerified || isAdmin === true;
 
   // Maßnahmenplan queries
   const { data: planSystemPrompt, isLoading: isPlanPromptLoading } = trpc.admin.getSystemPrompt.useQuery(undefined, {
-    enabled: isAdmin === true,
+    enabled: hasAdminAccess,
   });
 
   const { data: models } = trpc.admin.getModels.useQuery(undefined, {
-    enabled: isAdmin === true,
+    enabled: hasAdminAccess,
   });
 
   const { data: planCurrentModel } = trpc.admin.getSelectedModel.useQuery(undefined, {
-    enabled: isAdmin === true,
+    enabled: hasAdminAccess,
   });
 
   const { data: planTemplates } = trpc.admin.getPromptTemplates.useQuery(undefined, {
-    enabled: isAdmin === true,
+    enabled: hasAdminAccess,
   });
 
   // SIS-Prüfung queries
   const { data: checkSystemPrompt, isLoading: isCheckPromptLoading } = trpc.admin.getCheckSystemPrompt.useQuery(undefined, {
-    enabled: isAdmin === true,
+    enabled: hasAdminAccess,
   });
 
   const { data: checkCurrentModel } = trpc.admin.getCheckSelectedModel.useQuery(undefined, {
-    enabled: isAdmin === true,
+    enabled: hasAdminAccess,
   });
 
   const { data: checkTemplates } = trpc.admin.getCheckPromptTemplates.useQuery(undefined, {
-    enabled: isAdmin === true,
+    enabled: hasAdminAccess,
   });
 
   // Maßnahmenplan mutations
@@ -184,8 +187,8 @@ export default function Admin() {
     }
   }, [checkCurrentModel]);
 
-  // Loading state
-  if (authLoading || isAdminLoading) {
+  // Loading state (skip if admin verified via password)
+  if (authLoading || (!isAdminVerified && isAdminLoading)) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
@@ -219,7 +222,7 @@ export default function Admin() {
   }
 
   // Not admin
-  if (isAdmin === false) {
+  if (!hasAdminAccess) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <Card className="w-full max-w-md">

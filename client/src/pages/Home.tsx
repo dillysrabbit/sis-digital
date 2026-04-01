@@ -5,6 +5,7 @@ import { trpc } from "@/lib/trpc";
 import { getLoginUrl } from "@/const";
 import { useLocation } from "wouter";
 import { Plus, FileText, Trash2, Edit, Calendar, User, Loader2, LogIn, LogOut, ClipboardList, Shield, Heart, Lock } from "lucide-react";
+
 import { toast } from "sonner";
 import { useState } from "react";
 import {
@@ -42,40 +43,40 @@ export default function Home() {
     enabled: isAuthenticated,
   });
 
-  const { data: isAdmin, refetch: refetchAdmin } = trpc.admin.isAdmin.useQuery(undefined, {
-    enabled: isAuthenticated,
-  });
-
   const [showPasswordDialog, setShowPasswordDialog] = useState(false);
   const [adminPassword, setAdminPassword] = useState("");
-
-  const verifyPassword = trpc.admin.verifyAdminPassword.useMutation({
-    onSuccess: () => {
-      setShowPasswordDialog(false);
-      setAdminPassword("");
-      refetchAdmin();
-      setLocation("/admin");
-      toast.success("Adminzugang gewährt");
-    },
-    onError: (error) => {
-      toast.error(error.message);
-    },
-  });
+  const [verifyingPassword, setVerifyingPassword] = useState(false);
 
   const handleAdminClick = () => {
-    if (isAdmin) {
-      setLocation("/admin");
-    } else {
-      setShowPasswordDialog(false);
-      setAdminPassword("");
-      // Use setTimeout to avoid React batching issues with dialog state
-      setTimeout(() => setShowPasswordDialog(true), 0);
-    }
+    setAdminPassword("");
+    setShowPasswordDialog(true);
   };
 
-  const handlePasswordSubmit = () => {
+  const handlePasswordSubmit = async () => {
     if (!adminPassword.trim()) return;
-    verifyPassword.mutate({ password: adminPassword });
+    setVerifyingPassword(true);
+    try {
+      const res = await fetch("/api/admin/verify-password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ password: adminPassword }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        sessionStorage.setItem("adminVerified", "true");
+        setShowPasswordDialog(false);
+        setAdminPassword("");
+        toast.success("Adminzugang gewährt");
+        setLocation("/admin");
+      } else {
+        toast.error(data.error || "Fehler bei der Überprüfung");
+      }
+    } catch {
+      toast.error("Verbindungsfehler");
+    } finally {
+      setVerifyingPassword(false);
+    }
   };
 
   const deleteEntry = trpc.sis.delete.useMutation({
@@ -178,7 +179,7 @@ export default function Home() {
                 Angemeldet als {user?.name || user?.email || "Benutzer"}
               </span>
               <Button variant="outline" onClick={handleAdminClick} className="gap-2">
-                {isAdmin ? <Shield className="h-4 w-4" /> : <Lock className="h-4 w-4" />}
+                <Lock className="h-4 w-4" />
                 Admin
               </Button>
               <Button onClick={() => setLocation("/sis/new")} className="gap-2">
@@ -320,8 +321,8 @@ export default function Home() {
               <Button type="button" variant="outline" onClick={() => setShowPasswordDialog(false)}>
                 Abbrechen
               </Button>
-              <Button type="submit" disabled={!adminPassword.trim() || verifyPassword.isPending} className="gap-2">
-                {verifyPassword.isPending && <Loader2 className="h-4 w-4 animate-spin" />}
+              <Button type="submit" disabled={!adminPassword.trim() || verifyingPassword} className="gap-2">
+                {verifyingPassword && <Loader2 className="h-4 w-4 animate-spin" />}
                 Bestätigen
               </Button>
             </DialogFooter>
