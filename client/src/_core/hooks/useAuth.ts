@@ -48,6 +48,7 @@ export function useAuth(options?: UseAuthOptions) {
       // ignore
     }
     setUser(null);
+    window.location.href = getLoginUrl();
   }, []);
 
   const state = useMemo(() => ({

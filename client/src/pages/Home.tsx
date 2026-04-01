@@ -4,7 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { trpc } from "@/lib/trpc";
 import { getLoginUrl } from "@/const";
 import { useLocation } from "wouter";
-import { Plus, FileText, Trash2, Edit, Calendar, User, Loader2, LogIn, ClipboardList, Shield, Heart } from "lucide-react";
+import { Plus, FileText, Trash2, Edit, Calendar, User, Loader2, LogIn, LogOut, ClipboardList, Shield, Heart } from "lucide-react";
 import { toast } from "sonner";
 import {
   AlertDialog,
@@ -25,7 +25,7 @@ function CaritasLogo({ className }: { className?: string }) {
 }
 
 export default function Home() {
-  const { user, loading: authLoading, isAuthenticated } = useAuth();
+  const { user, loading: authLoading, isAuthenticated, logout } = useAuth();
   const [, setLocation] = useLocation();
 
   const { data: entries, isLoading: entriesLoading, refetch } = trpc.sis.list.useQuery(undefined, {
@@ -144,6 +144,10 @@ export default function Home() {
               <Button onClick={() => setLocation("/sis/new")} className="gap-2">
                 <Plus className="h-4 w-4" />
                 Neue SIS
+              </Button>
+              <Button variant="outline" onClick={logout} className="gap-2 text-destructive hover:text-destructive">
+                <LogOut className="h-4 w-4" />
+                Abmelden
               </Button>
             </div>
           </div>
