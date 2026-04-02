@@ -193,17 +193,40 @@ export default async function handler(req, res) {
           jwtPayload = payload;
         } catch (e) { jwtPayload = { error: e.message }; }
       }
+      // Test Supabase REST
       const usersRes = await fetch(`${sb.url}/rest/v1/users?select=*&limit=3`, {
         headers: { apikey: sb.key, Authorization: `Bearer ${sb.key}` },
       });
       const usersData = usersRes.ok ? await usersRes.json() : { error: usersRes.status, text: await usersRes.text() };
+
+      // Test postgres driver
+      let pgResult = null;
+      try {
+        const pg = (await import("postgres")).default;
+        const sql = pg(process.env.DATABASE_URL);
+        const rows = await sql`SELECT id, "openId", name, role FROM users LIMIT 3`;
+        pgResult = { count: rows.length, columns: rows.length > 0 ? Object.keys(rows[0]) : [], first: rows[0] || null };
+        await sql.end();
+      } catch (e) {
+        pgResult = { error: e.message };
+      }
+
       return res.json({
         hasCookie: !!token,
         jwt: jwtPayload,
-        usersCount: Array.isArray(usersData) ? usersData.length : 0,
-        columns: Array.isArray(usersData) && usersData.length > 0 ? Object.keys(usersData[0]) : [],
-        firstUser: Array.isArray(usersData) && usersData.length > 0 ? usersData[0] : null,
-        usersError: !Array.isArray(usersData) ? usersData : undefined,
+        supabase: {
+          usersCount: Array.isArray(usersData) ? usersData.length : 0,
+          columns: Array.isArray(usersData) && usersData.length > 0 ? Object.keys(usersData[0]) : [],
+          firstUser: Array.isArray(usersData) && usersData.length > 0 ? usersData[0] : null,
+          error: !Array.isArray(usersData) ? usersData : undefined,
+        },
+        postgres: pgResult,
+        envKeys: {
+          hasDbUrl: !!process.env.DATABASE_URL,
+          hasSupabaseUrl: !!process.env.SUPABASE_URL,
+          hasSupabaseKey: !!process.env.SUPABASE_SERVICE_KEY,
+          dbUrlPrefix: process.env.DATABASE_URL ? process.env.DATABASE_URL.substring(0, 30) + "..." : null,
+        }
       });
     }
 
