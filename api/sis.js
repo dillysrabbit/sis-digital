@@ -70,44 +70,48 @@ async function authenticateUser(req, sb) {
       return null;
     }
 
-    // Look up user via Supabase REST - use RPC to handle camelCase column
-    const res = await fetch(`${sb.url}/rest/v1/rpc/get_user_by_openid`, {
-      method: "POST",
-      headers: {
-        apikey: sb.key,
-        Authorization: `Bearer ${sb.key}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ open_id: payload.openId }),
+    // Debug: first list all columns to understand schema
+    const debugRes = await fetch(`${sb.url}/rest/v1/users?select=*&limit=1`, {
+      headers: { apikey: sb.key, Authorization: `Bearer ${sb.key}` },
     });
-
-    // If RPC doesn't exist, fall back to direct query with quoted column
-    if (!res.ok) {
-      console.error("SIS Auth: RPC failed, trying direct query");
-      const directRes = await fetch(`${sb.url}/rest/v1/users?select=id,role&${encodeURIComponent('"openId"')}=eq.${encodeURIComponent(payload.openId)}&limit=1`, {
-        headers: {
-          apikey: sb.key,
-          Authorization: `Bearer ${sb.key}`,
-        },
-      });
-      if (!directRes.ok) {
-        console.error("SIS Auth: direct query failed:", await directRes.text());
-        return null;
+    if (debugRes.ok) {
+      const debugRows = await debugRes.json();
+      if (debugRows.length > 0) {
+        console.error("SIS Auth DEBUG: columns =", Object.keys(debugRows[0]).join(", "));
       }
-      const rows = await directRes.json();
-      if (!rows || rows.length === 0) {
-        console.error("SIS Auth: user not found for openId:", payload.openId);
-        return null;
-      }
-      return { openId: payload.openId, id: rows[0].id, role: rows[0].role };
     }
 
-    const rows = await res.json();
-    if (!rows || rows.length === 0) {
-      console.error("SIS Auth: user not found for openId:", payload.openId);
-      return null;
+    // Fetch all users with this openId - try multiple column name variants
+    const openIdValue = encodeURIComponent(payload.openId);
+    const variants = [
+      `users?select=id,role&"openId"=eq.${openIdValue}&limit=1`,
+      `users?select=id,role&openId=eq.${openIdValue}&limit=1`,
+      `users?select=id,role&open_id=eq.${openIdValue}&limit=1`,
+    ];
+
+    for (const path of variants) {
+      try {
+        const url = `${sb.url}/rest/v1/${path}`;
+        console.error("SIS Auth: trying", url);
+        const res = await fetch(url, {
+          headers: { apikey: sb.key, Authorization: `Bearer ${sb.key}` },
+        });
+        if (!res.ok) {
+          console.error("SIS Auth: variant failed:", res.status, await res.text());
+          continue;
+        }
+        const rows = await res.json();
+        console.error("SIS Auth: variant returned", rows.length, "rows");
+        if (rows && rows.length > 0) {
+          return { openId: payload.openId, id: rows[0].id, role: rows[0].role };
+        }
+      } catch (e) {
+        console.error("SIS Auth: variant error:", e.message);
+      }
     }
-    return { openId: payload.openId, id: rows[0].id, role: rows[0].role };
+
+    console.error("SIS Auth: user not found for openId:", payload.openId);
+    return null;
   } catch (err) {
     console.error("SIS Auth error:", err.message);
     return null;
