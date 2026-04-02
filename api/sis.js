@@ -53,7 +53,7 @@ async function supabaseQuery(sb, path, options = {}) {
   return null;
 }
 
-async function authenticateUser(req) {
+async function authenticateUser(req, sb) {
   try {
     const cookieHeader = req.headers.cookie || "";
     const match = cookieHeader.match(/app_session_id=([^;]+)/);
@@ -70,19 +70,26 @@ async function authenticateUser(req) {
       return null;
     }
 
-    // Use postgres driver - same proven approach as api/auth/me.js
-    const pg = (await import("postgres")).default;
-    const sql = pg(process.env.DATABASE_URL);
-    try {
-      const rows = await sql`SELECT id, "openId", name, role FROM users WHERE "openId" = ${payload.openId} LIMIT 1`;
-      if (!rows || rows.length === 0) {
-        console.error("SIS Auth: user not found for openId:", payload.openId);
-        return null;
-      }
-      return { openId: payload.openId, id: rows[0].id, role: rows[0].role };
-    } finally {
-      await sql.end();
+    // Fetch all users and filter in JS (PostgREST has issues with camelCase column filtering)
+    const res = await fetch(`${sb.url}/rest/v1/users?select=*`, {
+      headers: { apikey: sb.key, Authorization: `Bearer ${sb.key}` },
+    });
+    if (!res.ok) {
+      console.error("SIS Auth: users query failed:", res.status);
+      return null;
     }
+    const allUsers = await res.json();
+    // Find user by matching openId value in any column
+    const user = allUsers.find(u =>
+      u.openId === payload.openId ||
+      u.open_id === payload.openId ||
+      u.openid === payload.openId
+    );
+    if (!user) {
+      console.error("SIS Auth: user not found. openId:", payload.openId, "columns:", allUsers.length > 0 ? Object.keys(allUsers[0]).join(",") : "no users");
+      return null;
+    }
+    return { openId: payload.openId, id: user.id, role: user.role };
   } catch (err) {
     console.error("SIS Auth error:", err.message);
     return null;
@@ -173,7 +180,7 @@ export default async function handler(req, res) {
       return res.status(500).json({ error: "Keine Datenbankverbindung" });
     }
 
-    const user = await authenticateUser(req);
+    const user = await authenticateUser(req, sb);
     if (!user) {
       return res.status(401).json({ error: "Nicht angemeldet" });
     }
