@@ -53,7 +53,7 @@ async function supabaseQuery(sb, path, options = {}) {
   return null;
 }
 
-async function authenticateUser(req, sb) {
+async function authenticateUser(req) {
   try {
     const cookieHeader = req.headers.cookie || "";
     const match = cookieHeader.match(/app_session_id=([^;]+)/);
@@ -70,48 +70,19 @@ async function authenticateUser(req, sb) {
       return null;
     }
 
-    // Debug: first list all columns to understand schema
-    const debugRes = await fetch(`${sb.url}/rest/v1/users?select=*&limit=1`, {
-      headers: { apikey: sb.key, Authorization: `Bearer ${sb.key}` },
-    });
-    if (debugRes.ok) {
-      const debugRows = await debugRes.json();
-      if (debugRows.length > 0) {
-        console.error("SIS Auth DEBUG: columns =", Object.keys(debugRows[0]).join(", "));
+    // Use postgres driver - same proven approach as api/auth/me.js
+    const pg = (await import("postgres")).default;
+    const sql = pg(process.env.DATABASE_URL);
+    try {
+      const rows = await sql`SELECT id, "openId", name, role FROM users WHERE "openId" = ${payload.openId} LIMIT 1`;
+      if (!rows || rows.length === 0) {
+        console.error("SIS Auth: user not found for openId:", payload.openId);
+        return null;
       }
+      return { openId: payload.openId, id: rows[0].id, role: rows[0].role };
+    } finally {
+      await sql.end();
     }
-
-    // Fetch all users with this openId - try multiple column name variants
-    const openIdValue = encodeURIComponent(payload.openId);
-    const variants = [
-      `users?select=id,role&"openId"=eq.${openIdValue}&limit=1`,
-      `users?select=id,role&openId=eq.${openIdValue}&limit=1`,
-      `users?select=id,role&open_id=eq.${openIdValue}&limit=1`,
-    ];
-
-    for (const path of variants) {
-      try {
-        const url = `${sb.url}/rest/v1/${path}`;
-        console.error("SIS Auth: trying", url);
-        const res = await fetch(url, {
-          headers: { apikey: sb.key, Authorization: `Bearer ${sb.key}` },
-        });
-        if (!res.ok) {
-          console.error("SIS Auth: variant failed:", res.status, await res.text());
-          continue;
-        }
-        const rows = await res.json();
-        console.error("SIS Auth: variant returned", rows.length, "rows");
-        if (rows && rows.length > 0) {
-          return { openId: payload.openId, id: rows[0].id, role: rows[0].role };
-        }
-      } catch (e) {
-        console.error("SIS Auth: variant error:", e.message);
-      }
-    }
-
-    console.error("SIS Auth: user not found for openId:", payload.openId);
-    return null;
   } catch (err) {
     console.error("SIS Auth error:", err.message);
     return null;
@@ -202,7 +173,7 @@ export default async function handler(req, res) {
       return res.status(500).json({ error: "Keine Datenbankverbindung" });
     }
 
-    const user = await authenticateUser(req, sb);
+    const user = await authenticateUser(req);
     if (!user) {
       return res.status(401).json({ error: "Nicht angemeldet" });
     }
