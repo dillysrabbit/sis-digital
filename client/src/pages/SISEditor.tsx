@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useParams, useLocation } from "wouter";
-import { trpc } from "@/lib/trpc";
+import { sisApi } from "@/lib/sisApi";
 import { SISForm, SISFormData } from "@/components/SISForm";
 import { MassnahmenplanDisplay } from "@/components/MassnahmenplanDisplay";
 
@@ -16,80 +16,54 @@ export default function SISEditor() {
   const isNew = !entryId;
 
   const [currentEntryId, setCurrentEntryId] = useState<number | null>(entryId);
+  const [existingEntry, setExistingEntry] = useState<any>(null);
+  const [isLoadingEntry, setIsLoadingEntry] = useState(!!entryId);
   const [massnahmenplan, setMassnahmenplan] = useState<string>("");
   const [pruefungsergebnis, setPruefungsergebnis] = useState<string>("");
   const [activeTab, setActiveTab] = useState<string>("massnahmenplan");
   const [isExporting, setIsExporting] = useState(false);
   const [isEditingPlan, setIsEditingPlan] = useState(false);
   const [isEditingCheck, setIsEditingCheck] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [isChecking, setIsChecking] = useState(false);
 
   // Fetch existing entry if editing
-  const { data: existingEntry, isLoading: isLoadingEntry, refetch: refetchEntry } = trpc.sis.get.useQuery(
-    { id: entryId! },
-    { enabled: !!entryId }
-  );
+  const loadEntry = async () => {
+    if (!entryId) return;
+    try {
+      setIsLoadingEntry(true);
+      const entry = await sisApi("get", { id: entryId });
+      setExistingEntry(entry);
+      if (entry.massnahmenplan) setMassnahmenplan(entry.massnahmenplan);
+      if (entry.pruefungsergebnis) setPruefungsergebnis(entry.pruefungsergebnis);
+    } catch (err: any) {
+      toast.error(`Fehler beim Laden: ${err.message}`);
+    } finally {
+      setIsLoadingEntry(false);
+    }
+  };
 
-  // Get tRPC utils for PDF export
-  const utils = trpc.useUtils();
-
-  // Mutations
-  const createEntry = trpc.sis.create.useMutation({
-    onSuccess: (data) => {
-      setCurrentEntryId(data.id);
-      toast.success("SIS-Eintrag erfolgreich erstellt");
-      setLocation(`/sis/${data.id}`);
-    },
-    onError: (error) => {
-      toast.error(`Fehler beim Erstellen: ${error.message}`);
-    },
-  });
-
-  const updateEntry = trpc.sis.update.useMutation({
-    onSuccess: () => {
-      toast.success("SIS-Eintrag erfolgreich aktualisiert");
-    },
-    onError: (error) => {
-      toast.error(`Fehler beim Speichern: ${error.message}`);
-    },
-  });
-
-  const generatePlan = trpc.sis.generatePlan.useMutation({
-    onSuccess: (data) => {
-      setMassnahmenplan(data.plan);
-      setActiveTab("massnahmenplan");
-      toast.success("Maßnahmenplan erfolgreich generiert");
-    },
-    onError: (error) => {
-      toast.error(`Fehler bei der Generierung: ${error.message}`);
-    },
-  });
-
-  const checkSis = trpc.sis.checkSis.useMutation({
-    onSuccess: (data) => {
-      setPruefungsergebnis(data.result);
-      setActiveTab("pruefung");
-      toast.success("SIS-Prüfung erfolgreich abgeschlossen");
-    },
-    onError: (error) => {
-      toast.error(`Fehler bei der Prüfung: ${error.message}`);
-    },
-  });
-
-  // Update massnahmenplan and pruefungsergebnis when entry is loaded
   useEffect(() => {
-    if (existingEntry?.massnahmenplan) {
-      setMassnahmenplan(existingEntry.massnahmenplan);
-    }
-    if (existingEntry?.pruefungsergebnis) {
-      setPruefungsergebnis(existingEntry.pruefungsergebnis);
-    }
-  }, [existingEntry]);
+    loadEntry();
+  }, [entryId]);
 
   const handleSave = async (data: SISFormData) => {
-    if (currentEntryId) {
-      await updateEntry.mutateAsync({ id: currentEntryId, data });
-    } else {
-      await createEntry.mutateAsync(data);
+    setIsSaving(true);
+    try {
+      if (currentEntryId) {
+        await sisApi("update", { id: currentEntryId, data });
+        toast.success("SIS-Eintrag erfolgreich aktualisiert");
+      } else {
+        const result = await sisApi("create", data);
+        setCurrentEntryId(result.id);
+        toast.success("SIS-Eintrag erfolgreich erstellt");
+        setLocation(`/sis/${result.id}`);
+      }
+    } catch (err: any) {
+      toast.error(`Fehler beim Speichern: ${err.message}`);
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -99,8 +73,17 @@ export default function SISEditor() {
       toast.error("Bitte speichern Sie den Eintrag zuerst");
       return;
     }
-
-    await generatePlan.mutateAsync({ id });
+    setIsGenerating(true);
+    try {
+      const result = await sisApi("generatePlan", { id });
+      setMassnahmenplan(result.plan);
+      setActiveTab("massnahmenplan");
+      toast.success("Maßnahmenplan erfolgreich generiert");
+    } catch (err: any) {
+      toast.error(`Fehler bei der Generierung: ${err.message}`);
+    } finally {
+      setIsGenerating(false);
+    }
   };
 
   const handleCheckSis = async () => {
@@ -109,8 +92,17 @@ export default function SISEditor() {
       toast.error("Bitte speichern Sie den Eintrag zuerst");
       return;
     }
-
-    await checkSis.mutateAsync({ id });
+    setIsChecking(true);
+    try {
+      const result = await sisApi("checkSis", { id });
+      setPruefungsergebnis(result.result);
+      setActiveTab("pruefung");
+      toast.success("SIS-Prüfung erfolgreich abgeschlossen");
+    } catch (err: any) {
+      toast.error(`Fehler bei der Prüfung: ${err.message}`);
+    } finally {
+      setIsChecking(false);
+    }
   };
 
   const handleExportPdf = async () => {
@@ -127,15 +119,13 @@ export default function SISEditor() {
 
     setIsExporting(true);
     try {
-      // Open PDF in new window using Express endpoint
-      // Add timestamp to prevent caching
       const pdfUrl = `/api/pdf/export/${id}?t=${Date.now()}`;
       const printWindow = window.open(pdfUrl, '_blank');
-      
+
       if (printWindow) {
-        toast.success("PDF-Export wird ge\u00f6ffnet...");
+        toast.success("PDF-Export wird geöffnet...");
       } else {
-        toast.error("Pop-up wurde blockiert. Bitte erlauben Sie Pop-ups f\u00fcr diese Seite.");
+        toast.error("Pop-up wurde blockiert. Bitte erlauben Sie Pop-ups für diese Seite.");
       }
     } catch (error) {
       toast.error(`Export fehlgeschlagen: ${(error as Error).message}`);
@@ -168,15 +158,14 @@ export default function SISEditor() {
         themenfeld6: existingEntry.themenfeld6 || "",
         riskMatrix: {
           ...existingEntry.riskMatrix as any,
-          // Migrate old sonstiges format (string) to new format (object with title)
-          sonstiges: typeof (existingEntry.riskMatrix as any)?.sonstiges === 'string' 
-            ? { 
-                title: "Sonstiges", 
-                tf1: { ja: false, weitere: false }, 
-                tf2: { ja: false, weitere: false }, 
-                tf3: { ja: false, weitere: false }, 
-                tf4: { ja: false, weitere: false }, 
-                tf5: { ja: false, weitere: false } 
+          sonstiges: typeof (existingEntry.riskMatrix as any)?.sonstiges === 'string'
+            ? {
+                title: "Sonstiges",
+                tf1: { ja: false, weitere: false },
+                tf2: { ja: false, weitere: false },
+                tf3: { ja: false, weitere: false },
+                tf4: { ja: false, weitere: false },
+                tf5: { ja: false, weitere: false }
               }
             : (existingEntry.riskMatrix as any)?.sonstiges
         },
@@ -229,9 +218,9 @@ export default function SISEditor() {
               onSave={handleSave}
               onGeneratePlan={handleGeneratePlan}
               onCheckSis={handleCheckSis}
-              isSaving={createEntry.isPending || updateEntry.isPending}
-              isGenerating={generatePlan.isPending}
-              isChecking={checkSis.isPending}
+              isSaving={isSaving}
+              isGenerating={isGenerating}
+              isChecking={isChecking}
             />
           </div>
 
@@ -259,7 +248,7 @@ export default function SISEditor() {
                     onEdit={() => setIsEditingPlan(true)}
                     onSave={async (newPlan) => {
                       if (currentEntryId) {
-                        await updateEntry.mutateAsync({ id: currentEntryId, data: { massnahmenplan: newPlan } });
+                        await sisApi("update", { id: currentEntryId, data: { massnahmenplan: newPlan } });
                         setMassnahmenplan(newPlan);
                         setIsEditingPlan(false);
                         toast.success("Maßnahmenplan gespeichert");
@@ -268,7 +257,7 @@ export default function SISEditor() {
                     onCancel={() => setIsEditingPlan(false)}
                     onVersionRestore={() => {
                       if (currentEntryId) {
-                        refetchEntry();
+                        loadEntry();
                       }
                     }}
                   />
@@ -285,7 +274,7 @@ export default function SISEditor() {
                     onEdit={() => setIsEditingCheck(true)}
                     onSave={async (newCheck) => {
                       if (currentEntryId) {
-                        await updateEntry.mutateAsync({ id: currentEntryId, data: { pruefungsergebnis: newCheck } });
+                        await sisApi("update", { id: currentEntryId, data: { pruefungsergebnis: newCheck } });
                         setPruefungsergebnis(newCheck);
                         setIsEditingCheck(false);
                         toast.success("Prüfungsergebnis gespeichert");

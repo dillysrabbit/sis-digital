@@ -1,26 +1,23 @@
 import { useParams, useLocation } from "wouter";
-import { trpc } from "@/lib/trpc";
+import { sisApi } from "@/lib/sisApi";
 import { Loader2, Printer } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 
 export default function PrintPlan() {
   const params = useParams();
   const id = params.id ? parseInt(params.id) : null;
   const [, setLocation] = useLocation();
-
-  const { data: entry, isLoading } = trpc.sis.get.useQuery(
-    { id: id! },
-    { enabled: !!id }
-  );
+  const [entry, setEntry] = useState<any>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    // Auto-print after content loads (optional)
-    if (entry && !isLoading) {
-      // Uncomment to enable auto-print:
-      // setTimeout(() => window.print(), 500);
-    }
-  }, [entry, isLoading]);
+    if (!id) { setIsLoading(false); return; }
+    sisApi("get", { id })
+      .then(setEntry)
+      .catch(() => setEntry(null))
+      .finally(() => setIsLoading(false));
+  }, [id]);
 
   if (!id) {
     return (

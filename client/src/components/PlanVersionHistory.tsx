@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -9,7 +9,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { trpc } from "@/lib/trpc";
+import { sisApi } from "@/lib/sisApi";
 import { History, RotateCcw, Eye, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { Streamdown } from "streamdown";
@@ -22,32 +22,43 @@ interface PlanVersionHistoryProps {
 export function PlanVersionHistory({ sisEntryId, onRestore }: PlanVersionHistoryProps) {
   const [open, setOpen] = useState(false);
   const [selectedVersion, setSelectedVersion] = useState<number | null>(null);
+  const [versions, setVersions] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [selectedVersionData, setSelectedVersionData] = useState<any>(null);
+  const [isRestoring, setIsRestoring] = useState(false);
 
-  const { data: versions, isLoading, refetch } = trpc.planVersions.list.useQuery(
-    { sisEntryId },
-    { enabled: open }
-  );
+  // Load versions when dialog opens
+  useEffect(() => {
+    if (!open) return;
+    setIsLoading(true);
+    sisApi("listVersions", { sisEntryId })
+      .then(setVersions)
+      .catch(() => setVersions([]))
+      .finally(() => setIsLoading(false));
+  }, [open, sisEntryId]);
 
-  const { data: selectedVersionData } = trpc.planVersions.get.useQuery(
-    { versionId: selectedVersion! },
-    { enabled: !!selectedVersion }
-  );
+  // Load selected version data
+  useEffect(() => {
+    if (!selectedVersion) { setSelectedVersionData(null); return; }
+    sisApi("getVersion", { versionId: selectedVersion })
+      .then(setSelectedVersionData)
+      .catch(() => setSelectedVersionData(null));
+  }, [selectedVersion]);
 
-  const restoreMutation = trpc.planVersions.restore.useMutation({
-    onSuccess: () => {
-      toast.success("Version erfolgreich wiederhergestellt");
-      setOpen(false);
-      setSelectedVersion(null);
-      onRestore?.();
-    },
-    onError: (error) => {
-      toast.error(`Fehler: ${error.message}`);
-    },
-  });
-
-  const handleRestore = (versionId: number) => {
+  const handleRestore = async (versionId: number) => {
     if (confirm("Möchten Sie diese Version wirklich wiederherstellen?")) {
-      restoreMutation.mutate({ versionId });
+      setIsRestoring(true);
+      try {
+        await sisApi("restoreVersion", { versionId });
+        toast.success("Version erfolgreich wiederhergestellt");
+        setOpen(false);
+        setSelectedVersion(null);
+        onRestore?.();
+      } catch (err: any) {
+        toast.error(`Fehler: ${err.message}`);
+      } finally {
+        setIsRestoring(false);
+      }
     }
   };
 
@@ -135,10 +146,10 @@ export function PlanVersionHistory({ sisEntryId, onRestore }: PlanVersionHistory
                     {versions && versions[0].id !== selectedVersion && (
                       <Button
                         onClick={() => handleRestore(selectedVersion)}
-                        disabled={restoreMutation.isPending}
+                        disabled={isRestoring}
                         className="gap-2"
                       >
-                        {restoreMutation.isPending ? (
+                        {isRestoring ? (
                           <Loader2 className="h-4 w-4 animate-spin" />
                         ) : (
                           <RotateCcw className="h-4 w-4" />

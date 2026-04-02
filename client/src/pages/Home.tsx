@@ -1,13 +1,13 @@
 import { useAuth } from "@/_core/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { trpc } from "@/lib/trpc";
+import { sisApi } from "@/lib/sisApi";
 import { getLoginUrl } from "@/const";
 import { useLocation } from "wouter";
 import { Plus, FileText, Trash2, Edit, Calendar, User, Loader2, LogIn, LogOut, ClipboardList, Shield, Heart, Lock } from "lucide-react";
 
 import { toast } from "sonner";
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -39,9 +39,25 @@ export default function Home() {
   const { user, loading: authLoading, isAuthenticated, logout } = useAuth();
   const [, setLocation] = useLocation();
 
-  const { data: entries, isLoading: entriesLoading, refetch } = trpc.sis.list.useQuery(undefined, {
-    enabled: isAuthenticated,
-  });
+  const [entries, setEntries] = useState<any[]>([]);
+  const [entriesLoading, setEntriesLoading] = useState(false);
+
+  const refetch = useCallback(async () => {
+    if (!isAuthenticated) return;
+    try {
+      setEntriesLoading(true);
+      const data = await sisApi("list");
+      setEntries(data);
+    } catch (err: any) {
+      console.error("Failed to load entries:", err);
+    } finally {
+      setEntriesLoading(false);
+    }
+  }, [isAuthenticated]);
+
+  useEffect(() => {
+    refetch();
+  }, [refetch]);
 
   const [showPasswordDialog, setShowPasswordDialog] = useState(false);
   const [adminPassword, setAdminPassword] = useState("");
@@ -79,15 +95,17 @@ export default function Home() {
     }
   };
 
-  const deleteEntry = trpc.sis.delete.useMutation({
-    onSuccess: () => {
-      toast.success("SIS-Eintrag gelöscht");
-      refetch();
+  const deleteEntry = {
+    mutate: async (data: { id: number }) => {
+      try {
+        await sisApi("delete", { id: data.id });
+        toast.success("SIS-Eintrag gelöscht");
+        refetch();
+      } catch (err: any) {
+        toast.error(`Fehler: ${err.message}`);
+      }
     },
-    onError: (error) => {
-      toast.error(`Fehler: ${error.message}`);
-    },
-  });
+  };
 
   if (authLoading) {
     return (
