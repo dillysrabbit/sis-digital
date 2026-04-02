@@ -13,7 +13,7 @@ function getSupabase() {
   return { url: url.replace(/\/$/, ""), key };
 }
 
-async function authenticateUser(req) {
+async function authenticateUser(req, sb) {
   const cookieHeader = req.headers.cookie || "";
   const match = cookieHeader.match(/app_session_id=([^;]+)/);
   const token = match ? match[1] : null;
@@ -22,6 +22,25 @@ async function authenticateUser(req) {
   const secret = new TextEncoder().encode(process.env.JWT_SECRET || "fallback-secret");
   const { payload } = await jwtVerify(token, secret, { algorithms: ["HS256"] });
   if (!payload.openId) return null;
+
+  // Look up the user's role from the database
+  if (sb) {
+    try {
+      const res = await fetch(
+        `${sb.url}/rest/v1/users?openId=eq.${encodeURIComponent(payload.openId)}&select=role&limit=1`,
+        { headers: { apikey: sb.key, Authorization: `Bearer ${sb.key}` } }
+      );
+      if (res.ok) {
+        const rows = await res.json();
+        if (rows.length > 0) {
+          payload.role = rows[0].role;
+        }
+      }
+    } catch (err) {
+      console.error("Failed to look up user role:", err.message);
+    }
+  }
+
   return payload;
 }
 
@@ -49,14 +68,14 @@ async function supabaseRequest(sb, path, options = {}) {
 
 export default async function handler(req, res) {
   try {
-    const user = await authenticateUser(req);
-    if (!user) {
-      return res.status(401).json({ error: "Nicht angemeldet" });
-    }
-
     const sb = getSupabase();
     if (!sb) {
       return res.status(500).json({ error: "Keine Datenbankverbindung" });
+    }
+
+    const user = await authenticateUser(req, sb);
+    if (!user) {
+      return res.status(401).json({ error: "Nicht angemeldet" });
     }
 
     const body = req.method === "POST" || req.method === "PUT" || req.method === "DELETE"
