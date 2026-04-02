@@ -193,18 +193,20 @@ export default async function handler(req, res) {
           jwtPayload = payload;
         } catch (e) { jwtPayload = { error: e.message }; }
       }
-      // List all available tables via OpenAPI schema
-      const schemaRes = await fetch(`${sb.url}/rest/v1/`, {
+      // Test users table
+      const usersRes = await fetch(`${sb.url}/rest/v1/users?select=id,role,%22openId%22&limit=3`, {
         headers: { apikey: sb.key, Authorization: `Bearer ${sb.key}` },
       });
-      const schemaData = schemaRes.ok ? await schemaRes.json() : { error: schemaRes.status };
-      // The root endpoint returns OpenAPI spec with paths = table names
-      const tables = schemaData.paths ? Object.keys(schemaData.paths).map(p => p.replace("/", "")) : [];
-
+      const usersData = usersRes.ok ? await usersRes.json() : { error: usersRes.status, text: await usersRes.text() };
+      // Test sis_entries table
+      const sisRes = await fetch(`${sb.url}/rest/v1/sis_entries?select=id,%22userId%22&limit=1`, {
+        headers: { apikey: sb.key, Authorization: `Bearer ${sb.key}` },
+      });
+      const sisData = sisRes.ok ? await sisRes.json() : { error: sisRes.status, text: await sisRes.text() };
       return res.json({
-        hasCookie: !!token,
         jwt: jwtPayload,
-        availableTables: tables,
+        users: usersData,
+        sisEntries: sisData,
       });
     }
 
