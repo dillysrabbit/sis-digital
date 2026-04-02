@@ -70,8 +70,8 @@ async function authenticateUser(req, sb) {
       return null;
     }
 
-    // Look up user ID via Supabase REST (same as admin/settings.js pattern)
-    const rows = await supabaseQuery(sb, `users?select=id,role&"openId"=eq.${encodeURIComponent(payload.openId)}&limit=1`);
+    // Look up user ID via Supabase REST
+    const rows = await supabaseQuery(sb, `users?select=id,role&openId=eq.${encodeURIComponent(payload.openId)}&limit=1`);
     if (!rows || rows.length === 0) {
       console.error("SIS Auth: user not found for openId:", payload.openId);
       return null;
