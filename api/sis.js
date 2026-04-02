@@ -70,26 +70,34 @@ async function authenticateUser(req, sb) {
       return null;
     }
 
-    // Fetch all users and filter in JS (PostgREST has issues with camelCase column filtering)
-    const res = await fetch(`${sb.url}/rest/v1/users?select=*`, {
-      headers: { apikey: sb.key, Authorization: `Bearer ${sb.key}` },
+    // Upsert user via Supabase REST (user may not exist yet if DATABASE_URL was missing during login)
+    const upsertRes = await fetch(`${sb.url}/rest/v1/users`, {
+      method: "POST",
+      headers: {
+        apikey: sb.key,
+        Authorization: `Bearer ${sb.key}`,
+        "Content-Type": "application/json",
+        Prefer: "return=representation,resolution=merge-duplicates",
+      },
+      body: JSON.stringify({
+        openId: payload.openId,
+        name: payload.name || "",
+        role: "user",
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        lastSignedIn: new Date().toISOString(),
+      }),
     });
-    if (!res.ok) {
-      console.error("SIS Auth: users query failed:", res.status);
+    if (!upsertRes.ok) {
+      console.error("SIS Auth: upsert failed:", await upsertRes.text());
       return null;
     }
-    const allUsers = await res.json();
-    // Find user by matching openId value in any column
-    const user = allUsers.find(u =>
-      u.openId === payload.openId ||
-      u.open_id === payload.openId ||
-      u.openid === payload.openId
-    );
-    if (!user) {
-      console.error("SIS Auth: user not found. openId:", payload.openId, "columns:", allUsers.length > 0 ? Object.keys(allUsers[0]).join(",") : "no users");
+    const rows = await upsertRes.json();
+    if (!rows || rows.length === 0) {
+      console.error("SIS Auth: upsert returned no rows");
       return null;
     }
-    return { openId: payload.openId, id: user.id, role: user.role };
+    return { openId: payload.openId, id: rows[0].id, role: rows[0].role };
   } catch (err) {
     console.error("SIS Auth error:", err.message);
     return null;

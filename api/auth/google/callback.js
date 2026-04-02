@@ -50,9 +50,31 @@ export default async function handler(req, res) {
       .setExpirationTime(Math.floor((Date.now() + 365 * 24 * 60 * 60 * 1000) / 1000))
       .sign(secret);
 
-    // Try to upsert user in DB (non-blocking)
+    // Upsert user in DB (non-blocking) - try Supabase REST first, then DATABASE_URL
     try {
-      if (process.env.DATABASE_URL) {
+      const sbUrl = process.env.SUPABASE_URL;
+      const sbKey = process.env.SUPABASE_SERVICE_KEY;
+      if (sbUrl && sbKey) {
+        await fetch(`${sbUrl.replace(/\/$/, "")}/rest/v1/users`, {
+          method: "POST",
+          headers: {
+            apikey: sbKey,
+            Authorization: `Bearer ${sbKey}`,
+            "Content-Type": "application/json",
+            Prefer: "resolution=merge-duplicates",
+          },
+          body: JSON.stringify({
+            openId,
+            name: userInfo.name || null,
+            email: userInfo.email || null,
+            loginMethod: "google",
+            lastSignedIn: new Date().toISOString(),
+            role: "user",
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+          }),
+        });
+      } else if (process.env.DATABASE_URL) {
         const pg = (await import("postgres")).default;
         const sql = pg(process.env.DATABASE_URL);
         await sql`
