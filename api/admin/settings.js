@@ -179,14 +179,15 @@ function getSupabase() {
 }
 
 async function supabaseQuery(sb, path, options = {}) {
+  const { headers: extraHeaders, ...restOptions } = options;
   const res = await fetch(`${sb.url}/rest/v1/${path}`, {
+    ...restOptions,
     headers: {
       apikey: sb.key,
       Authorization: `Bearer ${sb.key}`,
       "Content-Type": "application/json",
-      ...options.headers,
+      ...extraHeaders,
     },
-    ...options,
   });
   if (!res.ok) throw new Error(await res.text());
   const ct = res.headers.get("content-type") || "";
