@@ -70,34 +70,49 @@ async function authenticateUser(req, sb) {
       return null;
     }
 
-    // Upsert user via Supabase REST (user may not exist yet if DATABASE_URL was missing during login)
-    const upsertRes = await fetch(`${sb.url}/rest/v1/users`, {
-      method: "POST",
-      headers: {
-        apikey: sb.key,
-        Authorization: `Bearer ${sb.key}`,
-        "Content-Type": "application/json",
-        Prefer: "return=representation,resolution=merge-duplicates",
-      },
-      body: JSON.stringify({
-        openId: payload.openId,
-        name: payload.name || "",
-        role: "user",
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-        lastSignedIn: new Date().toISOString(),
-      }),
+    // Look up user - fetch all and filter in JS (PostgREST struggles with camelCase filters)
+    const allRes = await fetch(`${sb.url}/rest/v1/users?select=id,role,openId`, {
+      headers: { apikey: sb.key, Authorization: `Bearer ${sb.key}` },
     });
-    if (!upsertRes.ok) {
-      console.error("SIS Auth: upsert failed:", await upsertRes.text());
+    if (!allRes.ok) {
+      console.error("SIS Auth: users fetch failed:", allRes.status);
       return null;
     }
-    const rows = await upsertRes.json();
-    if (!rows || rows.length === 0) {
-      console.error("SIS Auth: upsert returned no rows");
+    const allUsers = await allRes.json();
+    let user = allUsers.find(u => u.openId === payload.openId);
+
+    // If user not found, create them
+    if (!user) {
+      const insertRes = await fetch(`${sb.url}/rest/v1/users`, {
+        method: "POST",
+        headers: {
+          apikey: sb.key,
+          Authorization: `Bearer ${sb.key}`,
+          "Content-Type": "application/json",
+          Prefer: "return=representation",
+        },
+        body: JSON.stringify({
+          openId: payload.openId,
+          name: payload.name || "",
+          role: "user",
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+          lastSignedIn: new Date().toISOString(),
+        }),
+      });
+      if (!insertRes.ok) {
+        console.error("SIS Auth: insert failed:", await insertRes.text());
+        return null;
+      }
+      const inserted = await insertRes.json();
+      user = inserted[0];
+    }
+
+    if (!user) {
+      console.error("SIS Auth: no user after lookup/insert");
       return null;
     }
-    return { openId: payload.openId, id: rows[0].id, role: rows[0].role };
+    return { openId: payload.openId, id: user.id, role: user.role };
   } catch (err) {
     console.error("SIS Auth error:", err.message);
     return null;
