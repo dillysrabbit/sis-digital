@@ -173,7 +173,7 @@ export default function Home() {
             <div className="flex items-center gap-2 md:gap-3">
               <CaritasLogo className="w-16 md:w-24" />
               <div>
-                <h1 className="text-base md:text-xl font-semibold leading-tight">Caritas SIS Digital</h1>
+                <h1 className="text-base md:text-xl font-semibold leading-tight text-primary">SIS Assist</h1>
                 <span className="text-xs text-muted-foreground md:hidden">
                   {user?.name || user?.email || "Benutzer"}
                 </span>

@@ -65,7 +65,7 @@ export default function Login() {
             <CaritasLogo className="w-48" />
           </div>
           <div>
-            <CardTitle className="text-2xl">Caritas SIS Digital</CardTitle>
+            <CardTitle className="text-2xl text-primary">SIS Assist</CardTitle>
             <CardDescription className="mt-2">
               Melden Sie sich an, um fortzufahren
             </CardDescription>
