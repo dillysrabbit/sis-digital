@@ -1,9 +1,4 @@
 import { jwtVerify } from "jose";
-import { Pool, neonConfig } from "@neondatabase/serverless";
-import ws from "ws";
-
-// Enable WebSocket for serverless
-neonConfig.webSocketConstructor = ws;
 
 // Available models (keep in sync with server/routers.ts)
 const AVAILABLE_MODELS = [
@@ -176,14 +171,20 @@ Gib Tipps zur Verbesserung der Dokumentationsqualität.`,
   },
 ];
 
-function getDb() {
+async function getDb() {
   if (!process.env.DATABASE_URL) return null;
-  return new Pool({ connectionString: process.env.DATABASE_URL, ssl: true, max: 1 });
+  try {
+    const pg = (await import("postgres")).default;
+    return pg(process.env.DATABASE_URL, { ssl: "require", connect_timeout: 10 });
+  } catch (err) {
+    console.error("DB init failed:", err.message);
+    return null;
+  }
 }
 
-async function getSetting(pool, key) {
+async function getSetting(sql, key) {
   try {
-    const { rows } = await pool.query('SELECT "settingValue" FROM global_settings WHERE "settingKey" = $1', [key]);
+    const rows = await sql`SELECT "settingValue" FROM global_settings WHERE "settingKey" = ${key}`;
     return rows.length > 0 ? rows[0].settingValue : null;
   } catch (err) {
     console.error("getSetting failed:", key, err.message);
@@ -191,12 +192,12 @@ async function getSetting(pool, key) {
   }
 }
 
-async function setSetting(pool, key, value) {
-  const { rows } = await pool.query('SELECT id FROM global_settings WHERE "settingKey" = $1', [key]);
-  if (rows.length > 0) {
-    await pool.query('UPDATE global_settings SET "settingValue" = $1, "updatedAt" = NOW() WHERE "settingKey" = $2', [value, key]);
+async function setSetting(sql, key, value) {
+  const existing = await sql`SELECT id FROM global_settings WHERE "settingKey" = ${key}`;
+  if (existing.length > 0) {
+    await sql`UPDATE global_settings SET "settingValue" = ${value}, "updatedAt" = NOW() WHERE "settingKey" = ${key}`;
   } else {
-    await pool.query('INSERT INTO global_settings ("settingKey", "settingValue", "createdAt", "updatedAt") VALUES ($1, $2, NOW(), NOW())', [key, value]);
+    await sql`INSERT INTO global_settings ("settingKey", "settingValue", "createdAt", "updatedAt") VALUES (${key}, ${value}, NOW(), NOW())`;
   }
 }
 
@@ -239,25 +240,25 @@ export default async function handler(req, res) {
     if (action === "applyTemplate" && req.method === "POST") {
       const template = PROMPT_TEMPLATES.find(t => t.id === body.templateId);
       if (!template) return res.status(400).json({ error: "Vorlage nicht gefunden" });
-      const pool = getDb();
-      if (pool) {
-        try { await setSetting(pool, "system_prompt", template.prompt); } finally { await pool.end(); }
+      const sql = await getDb();
+      if (sql) {
+        try { await setSetting(sql, "system_prompt", template.prompt); } finally { await sql.end(); }
       }
       return res.json({ success: true, prompt: template.prompt });
     }
     if (action === "applyCheckTemplate" && req.method === "POST") {
       const template = CHECK_PROMPT_TEMPLATES.find(t => t.id === body.templateId);
       if (!template) return res.status(400).json({ error: "Vorlage nicht gefunden" });
-      const pool = getDb();
-      if (pool) {
-        try { await setSetting(pool, "check_system_prompt", template.prompt); } finally { await pool.end(); }
+      const sql = await getDb();
+      if (sql) {
+        try { await setSetting(sql, "check_system_prompt", template.prompt); } finally { await sql.end(); }
       }
       return res.json({ success: true, prompt: template.prompt });
     }
 
     // DB-dependent operations
-    const pool = getDb();
-    if (!pool) {
+    const sql = await getDb();
+    if (!sql) {
       console.error("DB connection returned null. DATABASE_URL set:", !!process.env.DATABASE_URL);
       return res.status(500).json({ error: "Keine Datenbankverbindung. Bitte DATABASE_URL prüfen." });
     }
@@ -266,19 +267,19 @@ export default async function handler(req, res) {
       switch (action) {
         // ── Maßnahmenplan ──
         case "getSystemPrompt": {
-          const val = await getSetting(pool, "system_prompt");
+          const val = await getSetting(sql, "system_prompt");
           return res.json({ prompt: val || DEFAULT_SYSTEM_PROMPT });
         }
         case "setSystemPrompt": {
-          await setSetting(pool, "system_prompt", body.prompt);
+          await setSetting(sql, "system_prompt", body.prompt);
           return res.json({ success: true });
         }
         case "resetSystemPrompt": {
-          await setSetting(pool, "system_prompt", DEFAULT_SYSTEM_PROMPT);
+          await setSetting(sql, "system_prompt", DEFAULT_SYSTEM_PROMPT);
           return res.json({ success: true, prompt: DEFAULT_SYSTEM_PROMPT });
         }
         case "getSelectedModel": {
-          const val = await getSetting(pool, "anthropic_model");
+          const val = await getSetting(sql, "anthropic_model");
           return res.json({ model: val || DEFAULT_MODEL });
         }
         case "setModel": {
@@ -286,25 +287,25 @@ export default async function handler(req, res) {
           if (!valid.includes(body.model)) {
             return res.status(400).json({ error: "Ungültiges Modell" });
           }
-          await setSetting(pool, "anthropic_model", body.model);
+          await setSetting(sql, "anthropic_model", body.model);
           return res.json({ success: true });
         }
 
         // ── SIS-Prüfung ──
         case "getCheckSystemPrompt": {
-          const val = await getSetting(pool, "check_system_prompt");
+          const val = await getSetting(sql, "check_system_prompt");
           return res.json({ prompt: val || DEFAULT_CHECK_PROMPT });
         }
         case "setCheckSystemPrompt": {
-          await setSetting(pool, "check_system_prompt", body.prompt);
+          await setSetting(sql, "check_system_prompt", body.prompt);
           return res.json({ success: true });
         }
         case "resetCheckSystemPrompt": {
-          await setSetting(pool, "check_system_prompt", DEFAULT_CHECK_PROMPT);
+          await setSetting(sql, "check_system_prompt", DEFAULT_CHECK_PROMPT);
           return res.json({ success: true, prompt: DEFAULT_CHECK_PROMPT });
         }
         case "getCheckSelectedModel": {
-          const val = await getSetting(pool, "check_anthropic_model");
+          const val = await getSetting(sql, "check_anthropic_model");
           return res.json({ model: val || DEFAULT_MODEL });
         }
         case "setCheckModel": {
@@ -312,7 +313,7 @@ export default async function handler(req, res) {
           if (!valid.includes(body.model)) {
             return res.status(400).json({ error: "Ungültiges Modell" });
           }
-          await setSetting(pool, "check_anthropic_model", body.model);
+          await setSetting(sql, "check_anthropic_model", body.model);
           return res.json({ success: true });
         }
 
@@ -320,7 +321,7 @@ export default async function handler(req, res) {
           return res.status(400).json({ error: "Unbekannte Aktion" });
       }
     } finally {
-      await pool.end();
+      await sql.end();
     }
   } catch (err) {
     console.error("Admin settings error:", err.message, err.stack);
