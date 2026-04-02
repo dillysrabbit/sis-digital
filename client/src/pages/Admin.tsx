@@ -86,44 +86,80 @@ export default function Admin() {
   });
   const hasAdminAccess = isAdminVerified || isAdmin === true;
 
-  // Textbausteine queries (still via tRPC)
-  const { data: textBlocks, isLoading: isLoadingBlocks, refetch: refetchBlocks } = trpc.textBlocks.list.useQuery(undefined, {
-    enabled: hasAdminAccess,
-  });
+  // Textbausteine via REST API
+  const [textBlocks, setTextBlocks] = useState<any[]>([]);
+  const [isLoadingBlocks, setIsLoadingBlocks] = useState(false);
 
-  const createBlockMutation = trpc.textBlocks.create.useMutation({
-    onSuccess: () => {
-      toast.success("Textbaustein erfolgreich erstellt");
-      setIsTextBlockDialogOpen(false);
-      resetBlockForm();
-      refetchBlocks();
-    },
-    onError: (error) => {
-      toast.error(`Fehler beim Erstellen: ${error.message}`);
-    },
-  });
+  const refetchBlocks = useCallback(async () => {
+    try {
+      setIsLoadingBlocks(true);
+      const res = await fetch("/api/admin/text-blocks?action=list", { credentials: "include" });
+      if (!res.ok) throw new Error((await res.json()).error || "Fehler");
+      setTextBlocks(await res.json());
+    } catch (err: any) {
+      console.error("Failed to load text blocks:", err);
+    } finally {
+      setIsLoadingBlocks(false);
+    }
+  }, []);
 
-  const updateBlockMutation = trpc.textBlocks.update.useMutation({
-    onSuccess: () => {
-      toast.success("Textbaustein erfolgreich aktualisiert");
-      setIsTextBlockDialogOpen(false);
-      resetBlockForm();
-      refetchBlocks();
+  const createBlockMutation = {
+    mutate: async (data: { title: string; content: string; category: string }) => {
+      try {
+        const res = await fetch("/api/admin/text-blocks", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+          body: JSON.stringify({ action: "create", ...data }),
+        });
+        if (!res.ok) throw new Error((await res.json()).error || "Fehler");
+        toast.success("Textbaustein erfolgreich erstellt");
+        setIsTextBlockDialogOpen(false);
+        resetBlockForm();
+        refetchBlocks();
+      } catch (err: any) {
+        toast.error(`Fehler beim Erstellen: ${err.message}`);
+      }
     },
-    onError: (error) => {
-      toast.error(`Fehler beim Aktualisieren: ${error.message}`);
-    },
-  });
+  };
 
-  const deleteBlockMutation = trpc.textBlocks.delete.useMutation({
-    onSuccess: () => {
-      toast.success("Textbaustein erfolgreich gelöscht");
-      refetchBlocks();
+  const updateBlockMutation = {
+    mutate: async (data: { id: number; title: string; content: string; category: string }) => {
+      try {
+        const res = await fetch("/api/admin/text-blocks", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+          body: JSON.stringify({ action: "update", ...data }),
+        });
+        if (!res.ok) throw new Error((await res.json()).error || "Fehler");
+        toast.success("Textbaustein erfolgreich aktualisiert");
+        setIsTextBlockDialogOpen(false);
+        resetBlockForm();
+        refetchBlocks();
+      } catch (err: any) {
+        toast.error(`Fehler beim Aktualisieren: ${err.message}`);
+      }
     },
-    onError: (error) => {
-      toast.error(`Fehler beim Löschen: ${error.message}`);
+  };
+
+  const deleteBlockMutation = {
+    mutate: async (data: { id: number }) => {
+      try {
+        const res = await fetch("/api/admin/text-blocks", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+          body: JSON.stringify({ action: "delete", id: data.id }),
+        });
+        if (!res.ok) throw new Error((await res.json()).error || "Fehler");
+        toast.success("Textbaustein erfolgreich gelöscht");
+        refetchBlocks();
+      } catch (err: any) {
+        toast.error(`Fehler beim Löschen: ${err.message}`);
+      }
     },
-  });
+  };
 
   // Load all admin settings via REST API
   const loadSettings = useCallback(async () => {
@@ -166,6 +202,12 @@ export default function Admin() {
   useEffect(() => {
     loadSettings();
   }, [loadSettings]);
+
+  useEffect(() => {
+    if (hasAdminAccess) {
+      refetchBlocks();
+    }
+  }, [hasAdminAccess, refetchBlocks]);
 
   // Loading state (skip if admin verified via password)
   if (authLoading || (!isAdminVerified && isAdminLoading)) {

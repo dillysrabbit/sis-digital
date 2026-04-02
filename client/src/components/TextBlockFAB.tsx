@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Popover,
@@ -6,7 +6,6 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { trpc } from "@/lib/trpc";
 import { FileText, Loader2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 
@@ -42,7 +41,16 @@ const categoryColors: Record<string, string> = {
 
 export function TextBlockFAB({ onSelect }: TextBlockFABProps) {
   const [open, setOpen] = useState(false);
-  const { data: textBlocks, isLoading } = trpc.textBlocks.list.useQuery();
+  const [textBlocks, setTextBlocks] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    fetch("/api/admin/text-blocks?action=list", { credentials: "include" })
+      .then((res) => (res.ok ? res.json() : []))
+      .then(setTextBlocks)
+      .catch(() => setTextBlocks([]))
+      .finally(() => setIsLoading(false));
+  }, []);
 
   // Gruppiere Textbausteine nach Kategorie
   const groupedBlocks = textBlocks?.reduce((acc, block) => {
@@ -101,7 +109,7 @@ export function TextBlockFAB({ onSelect }: TextBlockFABProps) {
                     {categoryLabels[category] || category}
                   </Badge>
                   <div className="space-y-1">
-                    {blocks.map((block) => (
+                    {(blocks as any[]).map((block) => (
                       <button
                         key={block.id}
                         onClick={() => handleSelect(block.content)}

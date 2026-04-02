@@ -7,8 +7,8 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { trpc } from "@/lib/trpc";
 import { FileText, Loader2 } from "lucide-react";
+import { useEffect, useState } from "react";
 
 interface TextBlockButtonProps {
   category?: string;
@@ -16,17 +16,19 @@ interface TextBlockButtonProps {
 }
 
 export function TextBlockButton({ category, onSelect }: TextBlockButtonProps) {
-  const { data: textBlocks, isLoading } = trpc.textBlocks.list.useQuery(
-    undefined,
-    { enabled: !category }
-  );
-  const { data: categoryBlocks, isLoading: isCategoryLoading } = trpc.textBlocks.byCategory.useQuery(
-    { category: category! },
-    { enabled: !!category }
-  );
+  const [blocks, setBlocks] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const blocks = category ? categoryBlocks : textBlocks;
-  const loading = category ? isCategoryLoading : isLoading;
+  useEffect(() => {
+    const url = category
+      ? `/api/admin/text-blocks?action=byCategory&category=${encodeURIComponent(category)}`
+      : "/api/admin/text-blocks?action=list";
+    fetch(url, { credentials: "include" })
+      .then((res) => (res.ok ? res.json() : []))
+      .then(setBlocks)
+      .catch(() => setBlocks([]))
+      .finally(() => setLoading(false));
+  }, [category]);
 
   if (loading) {
     return (
