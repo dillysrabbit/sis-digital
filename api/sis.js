@@ -53,7 +53,7 @@ async function supabaseQuery(sb, path, options = {}) {
   return null;
 }
 
-async function authenticateUser(req, sb) {
+async function authenticateUser(req) {
   try {
     const cookieHeader = req.headers.cookie || "";
     const match = cookieHeader.match(/app_session_id=([^;]+)/);
@@ -70,8 +70,16 @@ async function authenticateUser(req, sb) {
       return null;
     }
 
-    // Look up user ID via Supabase REST
-    const rows = await supabaseQuery(sb, `users?select=id,role&openId=eq.${encodeURIComponent(payload.openId)}&limit=1`);
+    // Look up user ID via postgres driver (same approach as api/auth/me.js)
+    if (!process.env.DATABASE_URL) {
+      console.error("SIS Auth: no DATABASE_URL");
+      return null;
+    }
+    const pg = (await import("postgres")).default;
+    const sql = pg(process.env.DATABASE_URL);
+    const rows = await sql`SELECT id, "openId", name, role FROM users WHERE "openId" = ${payload.openId} LIMIT 1`;
+    await sql.end();
+
     if (!rows || rows.length === 0) {
       console.error("SIS Auth: user not found for openId:", payload.openId);
       return null;
@@ -168,7 +176,7 @@ export default async function handler(req, res) {
       return res.status(500).json({ error: "Keine Datenbankverbindung" });
     }
 
-    const user = await authenticateUser(req, sb);
+    const user = await authenticateUser(req);
     if (!user) {
       return res.status(401).json({ error: "Nicht angemeldet" });
     }
