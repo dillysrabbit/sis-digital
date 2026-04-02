@@ -196,7 +196,7 @@ async function getSetting(sb, settingKey) {
 async function setSetting(sb, settingKey, value) {
   // Upsert via POST with on-conflict resolution
   const res = await fetch(
-    `${sb.url}/rest/v1/global_settings`,
+    `${sb.url}/rest/v1/global_settings?on_conflict=settingKey`,
     {
       method: "POST",
       headers: {
