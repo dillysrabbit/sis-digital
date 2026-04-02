@@ -86,16 +86,15 @@ export default function Admin() {
   });
   const hasAdminAccess = isAdminVerified || isAdmin === true;
 
-  // Textbausteine via REST API
+  // Textbausteine via adminApi (same pattern as Maßnahmenplan / SIS-Prüfung)
   const [textBlocks, setTextBlocks] = useState<any[]>([]);
   const [isLoadingBlocks, setIsLoadingBlocks] = useState(false);
 
   const refetchBlocks = useCallback(async () => {
     try {
       setIsLoadingBlocks(true);
-      const res = await fetch("/api/admin/text-blocks?action=list", { credentials: "include" });
-      if (!res.ok) throw new Error((await res.json()).error || "Fehler");
-      setTextBlocks(await res.json());
+      const rows = await adminApi("listTextBlocks");
+      setTextBlocks(rows);
     } catch (err: any) {
       console.error("Failed to load text blocks:", err);
     } finally {
@@ -106,13 +105,7 @@ export default function Admin() {
   const createBlockMutation = {
     mutate: async (data: { title: string; content: string; category: string }) => {
       try {
-        const res = await fetch("/api/admin/text-blocks", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          credentials: "include",
-          body: JSON.stringify({ action: "create", ...data }),
-        });
-        if (!res.ok) throw new Error((await res.json()).error || "Fehler");
+        await adminApi("createTextBlock", data);
         toast.success("Textbaustein erfolgreich erstellt");
         setIsTextBlockDialogOpen(false);
         resetBlockForm();
@@ -126,13 +119,7 @@ export default function Admin() {
   const updateBlockMutation = {
     mutate: async (data: { id: number; title: string; content: string; category: string }) => {
       try {
-        const res = await fetch("/api/admin/text-blocks", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          credentials: "include",
-          body: JSON.stringify({ action: "update", ...data }),
-        });
-        if (!res.ok) throw new Error((await res.json()).error || "Fehler");
+        await adminApi("updateTextBlock", data);
         toast.success("Textbaustein erfolgreich aktualisiert");
         setIsTextBlockDialogOpen(false);
         resetBlockForm();
@@ -146,13 +133,7 @@ export default function Admin() {
   const deleteBlockMutation = {
     mutate: async (data: { id: number }) => {
       try {
-        const res = await fetch("/api/admin/text-blocks", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          credentials: "include",
-          body: JSON.stringify({ action: "delete", id: data.id }),
-        });
-        if (!res.ok) throw new Error((await res.json()).error || "Fehler");
+        await adminApi("deleteTextBlock", { id: data.id });
         toast.success("Textbaustein erfolgreich gelöscht");
         refetchBlocks();
       } catch (err: any) {

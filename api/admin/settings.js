@@ -178,6 +178,22 @@ function getSupabase() {
   return { url: url.replace(/\/$/, ""), key };
 }
 
+async function supabaseQuery(sb, path, options = {}) {
+  const res = await fetch(`${sb.url}/rest/v1/${path}`, {
+    headers: {
+      apikey: sb.key,
+      Authorization: `Bearer ${sb.key}`,
+      "Content-Type": "application/json",
+      ...options.headers,
+    },
+    ...options,
+  });
+  if (!res.ok) throw new Error(await res.text());
+  const ct = res.headers.get("content-type") || "";
+  if (ct.includes("application/json")) return res.json();
+  return null;
+}
+
 async function getSetting(sb, settingKey) {
   try {
     const res = await fetch(
@@ -327,6 +343,54 @@ export default async function handler(req, res) {
           return res.status(400).json({ error: "Ungültiges Modell" });
         }
         await setSetting(sb, "check_anthropic_model", body.model);
+        return res.json({ success: true });
+      }
+
+      // ── Textbausteine ──
+      case "listTextBlocks": {
+        const rows = await supabaseQuery(sb, "text_blocks?order=createdAt.desc");
+        return res.json(rows);
+      }
+      case "getTextBlocksByCategory": {
+        const category = body.category || req.query.category;
+        if (!category) return res.status(400).json({ error: "Kategorie erforderlich" });
+        const rows = await supabaseQuery(sb, `text_blocks?category=eq.${encodeURIComponent(category)}&order=createdAt.desc`);
+        return res.json(rows);
+      }
+      case "createTextBlock": {
+        const { title, content, category } = body;
+        if (!title || !content || !category) {
+          return res.status(400).json({ error: "Titel, Inhalt und Kategorie sind erforderlich" });
+        }
+        const created = await supabaseQuery(sb, "text_blocks", {
+          method: "POST",
+          headers: { Prefer: "return=representation" },
+          body: JSON.stringify({
+            title, content, category,
+            isDefault: body.isDefault || false,
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+          }),
+        });
+        return res.json({ success: true, id: created?.[0]?.id });
+      }
+      case "updateTextBlock": {
+        const { id: updateId, ...updateData } = body;
+        if (!updateId) return res.status(400).json({ error: "ID erforderlich" });
+        const patch = { updatedAt: new Date().toISOString() };
+        if (updateData.title !== undefined) patch.title = updateData.title;
+        if (updateData.content !== undefined) patch.content = updateData.content;
+        if (updateData.category !== undefined) patch.category = updateData.category;
+        await supabaseQuery(sb, `text_blocks?id=eq.${updateId}`, {
+          method: "PATCH",
+          body: JSON.stringify(patch),
+        });
+        return res.json({ success: true });
+      }
+      case "deleteTextBlock": {
+        const deleteId = body.id || req.query.id;
+        if (!deleteId) return res.status(400).json({ error: "ID erforderlich" });
+        await supabaseQuery(sb, `text_blocks?id=eq.${deleteId}`, { method: "DELETE" });
         return res.json({ success: true });
       }
 

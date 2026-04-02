@@ -45,7 +45,7 @@ export function TextBlockFAB({ onSelect }: TextBlockFABProps) {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    fetch("/api/admin/text-blocks?action=list", { credentials: "include" })
+    fetch("/api/admin/settings?action=listTextBlocks", { credentials: "include" })
       .then((res) => (res.ok ? res.json() : []))
       .then(setTextBlocks)
       .catch(() => setTextBlocks([]))

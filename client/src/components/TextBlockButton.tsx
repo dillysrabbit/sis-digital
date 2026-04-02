@@ -20,9 +20,10 @@ export function TextBlockButton({ category, onSelect }: TextBlockButtonProps) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    const action = category ? "getTextBlocksByCategory" : "listTextBlocks";
     const url = category
-      ? `/api/admin/text-blocks?action=byCategory&category=${encodeURIComponent(category)}`
-      : "/api/admin/text-blocks?action=list";
+      ? `/api/admin/settings?action=${action}&category=${encodeURIComponent(category)}`
+      : `/api/admin/settings?action=${action}`;
     fetch(url, { credentials: "include" })
       .then((res) => (res.ok ? res.json() : []))
       .then(setBlocks)
