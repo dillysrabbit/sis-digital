@@ -55,34 +55,41 @@ async function supabaseQuery(sb, path, options = {}) {
 
 async function authenticateUser(req) {
   const cookieHeader = req.headers.cookie || "";
+  console.log("SIS Auth: cookie present:", !!cookieHeader, "has app_session_id:", cookieHeader.includes("app_session_id"));
   const match = cookieHeader.match(/app_session_id=([^;]+)/);
   const token = match ? match[1] : null;
-  if (!token) return null;
+  if (!token) {
+    console.log("SIS Auth: no token found in cookies");
+    return null;
+  }
 
   try {
     const secret = new TextEncoder().encode(process.env.JWT_SECRET || "fallback-secret");
     const { payload } = await jwtVerify(token, secret, { algorithms: ["HS256"] });
+    console.log("SIS Auth: JWT verified, openId:", payload.openId);
     if (!payload.openId) return null;
 
     // Look up user ID from database (same approach as api/auth/me.js)
+    console.log("SIS Auth: DATABASE_URL set:", !!process.env.DATABASE_URL);
     if (process.env.DATABASE_URL) {
       const pg = (await import("postgres")).default;
       const sql = pg(process.env.DATABASE_URL);
       try {
         const rows = await sql`SELECT id, "openId", name, email, role FROM users WHERE "openId" = ${payload.openId} LIMIT 1`;
         await sql.end();
+        console.log("SIS Auth: DB lookup returned", rows.length, "rows");
         if (rows.length > 0) {
           return rows[0];
         }
       } catch (dbErr) {
-        console.error("DB lookup failed:", dbErr.message);
+        console.error("SIS Auth: DB lookup failed:", dbErr.message);
         await sql.end().catch(() => {});
       }
     }
 
     return null;
   } catch (err) {
-    console.error("Auth error:", err.message);
+    console.error("SIS Auth error:", err.message);
     return null;
   }
 }
