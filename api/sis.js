@@ -53,7 +53,7 @@ async function supabaseQuery(sb, path, options = {}) {
   return null;
 }
 
-async function authenticateUser(req) {
+async function authenticateUser(req, sb) {
   try {
     const cookieHeader = req.headers.cookie || "";
     const match = cookieHeader.match(/app_session_id=([^;]+)/);
@@ -70,21 +70,43 @@ async function authenticateUser(req) {
       return null;
     }
 
-    // Look up user ID via postgres driver (same approach as api/auth/me.js)
-    if (!process.env.DATABASE_URL) {
-      console.error("SIS Auth: no DATABASE_URL");
-      return null;
-    }
-    const pg = (await import("postgres")).default;
-    const sql = pg(process.env.DATABASE_URL);
-    const rows = await sql`SELECT id, "openId", name, role FROM users WHERE "openId" = ${payload.openId} LIMIT 1`;
-    await sql.end();
+    // Look up user via Supabase REST - use RPC to handle camelCase column
+    const res = await fetch(`${sb.url}/rest/v1/rpc/get_user_by_openid`, {
+      method: "POST",
+      headers: {
+        apikey: sb.key,
+        Authorization: `Bearer ${sb.key}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ open_id: payload.openId }),
+    });
 
+    // If RPC doesn't exist, fall back to direct query with quoted column
+    if (!res.ok) {
+      console.error("SIS Auth: RPC failed, trying direct query");
+      const directRes = await fetch(`${sb.url}/rest/v1/users?select=id,role&${encodeURIComponent('"openId"')}=eq.${encodeURIComponent(payload.openId)}&limit=1`, {
+        headers: {
+          apikey: sb.key,
+          Authorization: `Bearer ${sb.key}`,
+        },
+      });
+      if (!directRes.ok) {
+        console.error("SIS Auth: direct query failed:", await directRes.text());
+        return null;
+      }
+      const rows = await directRes.json();
+      if (!rows || rows.length === 0) {
+        console.error("SIS Auth: user not found for openId:", payload.openId);
+        return null;
+      }
+      return { openId: payload.openId, id: rows[0].id, role: rows[0].role };
+    }
+
+    const rows = await res.json();
     if (!rows || rows.length === 0) {
       console.error("SIS Auth: user not found for openId:", payload.openId);
       return null;
     }
-
     return { openId: payload.openId, id: rows[0].id, role: rows[0].role };
   } catch (err) {
     console.error("SIS Auth error:", err.message);
@@ -176,7 +198,7 @@ export default async function handler(req, res) {
       return res.status(500).json({ error: "Keine Datenbankverbindung" });
     }
 
-    const user = await authenticateUser(req);
+    const user = await authenticateUser(req, sb);
     if (!user) {
       return res.status(401).json({ error: "Nicht angemeldet" });
     }
