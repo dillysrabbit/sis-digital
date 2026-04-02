@@ -180,6 +180,33 @@ export default async function handler(req, res) {
       return res.status(500).json({ error: "Keine Datenbankverbindung" });
     }
 
+    // Temporary debug endpoint
+    if (req.query.action === "debug") {
+      const cookieHeader = req.headers.cookie || "";
+      const match = cookieHeader.match(/app_session_id=([^;]+)/);
+      const token = match ? match[1] : null;
+      let jwtPayload = null;
+      if (token) {
+        try {
+          const secret = new TextEncoder().encode(process.env.JWT_SECRET || "fallback-secret");
+          const { payload } = await jwtVerify(token, secret, { algorithms: ["HS256"] });
+          jwtPayload = payload;
+        } catch (e) { jwtPayload = { error: e.message }; }
+      }
+      const usersRes = await fetch(`${sb.url}/rest/v1/users?select=*&limit=3`, {
+        headers: { apikey: sb.key, Authorization: `Bearer ${sb.key}` },
+      });
+      const usersData = usersRes.ok ? await usersRes.json() : { error: usersRes.status, text: await usersRes.text() };
+      return res.json({
+        hasCookie: !!token,
+        jwt: jwtPayload,
+        usersCount: Array.isArray(usersData) ? usersData.length : 0,
+        columns: Array.isArray(usersData) && usersData.length > 0 ? Object.keys(usersData[0]) : [],
+        firstUser: Array.isArray(usersData) && usersData.length > 0 ? usersData[0] : null,
+        usersError: !Array.isArray(usersData) ? usersData : undefined,
+      });
+    }
+
     const user = await authenticateUser(req, sb);
     if (!user) {
       return res.status(401).json({ error: "Nicht angemeldet" });
