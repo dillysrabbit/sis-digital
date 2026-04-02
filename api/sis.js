@@ -57,17 +57,31 @@ async function authenticateUser(req, sb) {
   const cookieHeader = req.headers.cookie || "";
   const match = cookieHeader.match(/app_session_id=([^;]+)/);
   const token = match ? match[1] : null;
-  if (!token) return null;
+  if (!token) {
+    console.error("Auth: no cookie token found");
+    return null;
+  }
 
-  const secret = new TextEncoder().encode(process.env.JWT_SECRET || "fallback-secret");
-  const { payload } = await jwtVerify(token, secret, { algorithms: ["HS256"] });
-  if (!payload.openId) return null;
+  try {
+    const secret = new TextEncoder().encode(process.env.JWT_SECRET || "fallback-secret");
+    const { payload } = await jwtVerify(token, secret, { algorithms: ["HS256"] });
+    if (!payload.openId) {
+      console.error("Auth: no openId in JWT payload");
+      return null;
+    }
 
-  // Look up user ID from database
-  const rows = await supabaseQuery(sb, `users?openId=eq.${encodeURIComponent(payload.openId)}&select=id,role&limit=1`);
-  if (!rows || rows.length === 0) return null;
+    // Look up user ID from database
+    const rows = await supabaseQuery(sb, `users?openId=eq.${encodeURIComponent(payload.openId)}&select=id,role&limit=1`);
+    if (!rows || rows.length === 0) {
+      console.error("Auth: user not found for openId", payload.openId);
+      return null;
+    }
 
-  return { ...payload, id: rows[0].id, role: rows[0].role };
+    return { ...payload, id: rows[0].id, role: rows[0].role };
+  } catch (err) {
+    console.error("Auth error:", err.message);
+    return null;
+  }
 }
 
 async function getSetting(sb, key) {
