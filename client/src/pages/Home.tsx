@@ -173,7 +173,12 @@ export default function Home() {
             <div className="flex items-center gap-2 md:gap-3">
               <CaritasLogo className="w-16 md:w-24" />
               <div>
-                <h1 className="text-base md:text-xl font-semibold leading-tight text-primary">SIS Assist</h1>
+                <h1
+                  className="font-bold leading-none text-primary"
+                  style={{ fontFamily: "'Fira Sans', sans-serif", fontSize: 'clamp(2rem, 5vw, 3.5rem)' }}
+                >
+                  SIS Assist
+                </h1>
                 <span className="text-xs text-muted-foreground md:hidden">
                   {user?.name || user?.email || "Benutzer"}
                 </span>

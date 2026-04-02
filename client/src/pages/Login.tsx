@@ -65,7 +65,7 @@ export default function Login() {
             <CaritasLogo className="w-48" />
           </div>
           <div>
-            <CardTitle className="text-2xl text-primary">SIS Assist</CardTitle>
+            <CardTitle className="text-3xl font-bold text-primary" style={{ fontFamily: "'Fira Sans', sans-serif" }}>SIS Assist</CardTitle>
             <CardDescription className="mt-2">
               Melden Sie sich an, um fortzufahren
             </CardDescription>
