@@ -53,31 +53,34 @@ async function supabaseQuery(sb, path, options = {}) {
   return null;
 }
 
-async function authenticateUser(req, sb) {
+async function authenticateUser(req) {
   const cookieHeader = req.headers.cookie || "";
   const match = cookieHeader.match(/app_session_id=([^;]+)/);
   const token = match ? match[1] : null;
-  if (!token) {
-    console.error("Auth: no cookie token found");
-    return null;
-  }
+  if (!token) return null;
 
   try {
     const secret = new TextEncoder().encode(process.env.JWT_SECRET || "fallback-secret");
     const { payload } = await jwtVerify(token, secret, { algorithms: ["HS256"] });
-    if (!payload.openId) {
-      console.error("Auth: no openId in JWT payload");
-      return null;
+    if (!payload.openId) return null;
+
+    // Look up user ID from database (same approach as api/auth/me.js)
+    if (process.env.DATABASE_URL) {
+      const pg = (await import("postgres")).default;
+      const sql = pg(process.env.DATABASE_URL);
+      try {
+        const rows = await sql`SELECT id, "openId", name, email, role FROM users WHERE "openId" = ${payload.openId} LIMIT 1`;
+        await sql.end();
+        if (rows.length > 0) {
+          return rows[0];
+        }
+      } catch (dbErr) {
+        console.error("DB lookup failed:", dbErr.message);
+        await sql.end().catch(() => {});
+      }
     }
 
-    // Look up user ID from database
-    const rows = await supabaseQuery(sb, `users?openId=eq.${encodeURIComponent(payload.openId)}&select=id,role&limit=1`);
-    if (!rows || rows.length === 0) {
-      console.error("Auth: user not found for openId", payload.openId);
-      return null;
-    }
-
-    return { ...payload, id: rows[0].id, role: rows[0].role };
+    return null;
   } catch (err) {
     console.error("Auth error:", err.message);
     return null;
@@ -168,7 +171,7 @@ export default async function handler(req, res) {
       return res.status(500).json({ error: "Keine Datenbankverbindung" });
     }
 
-    const user = await authenticateUser(req, sb);
+    const user = await authenticateUser(req);
     if (!user) {
       return res.status(401).json({ error: "Nicht angemeldet" });
     }
