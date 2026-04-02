@@ -171,34 +171,48 @@ Gib Tipps zur Verbesserung der Dokumentationsqualität.`,
   },
 ];
 
-async function getDb() {
-  if (!process.env.DATABASE_URL) return null;
-  try {
-    const pg = (await import("postgres")).default;
-    return pg(process.env.DATABASE_URL, { ssl: "require", connect_timeout: 10 });
-  } catch (err) {
-    console.error("DB init failed:", err.message);
-    return null;
-  }
+function getSupabase() {
+  const url = process.env.SUPABASE_URL;
+  const key = process.env.SUPABASE_SERVICE_KEY;
+  if (!url || !key) return null;
+  return { url: url.replace(/\/$/, ""), key };
 }
 
-async function getSetting(sql, key) {
+async function getSetting(sb, settingKey) {
   try {
-    const rows = await sql`SELECT "settingValue" FROM global_settings WHERE "settingKey" = ${key}`;
+    const res = await fetch(
+      `${sb.url}/rest/v1/global_settings?settingKey=eq.${encodeURIComponent(settingKey)}&select=settingValue&limit=1`,
+      { headers: { apikey: sb.key, Authorization: `Bearer ${sb.key}` } }
+    );
+    if (!res.ok) throw new Error(await res.text());
+    const rows = await res.json();
     return rows.length > 0 ? rows[0].settingValue : null;
   } catch (err) {
-    console.error("getSetting failed:", key, err.message);
+    console.error("getSetting failed:", settingKey, err.message);
     return null;
   }
 }
 
-async function setSetting(sql, key, value) {
-  const existing = await sql`SELECT id FROM global_settings WHERE "settingKey" = ${key}`;
-  if (existing.length > 0) {
-    await sql`UPDATE global_settings SET "settingValue" = ${value}, "updatedAt" = NOW() WHERE "settingKey" = ${key}`;
-  } else {
-    await sql`INSERT INTO global_settings ("settingKey", "settingValue", "createdAt", "updatedAt") VALUES (${key}, ${value}, NOW(), NOW())`;
-  }
+async function setSetting(sb, settingKey, value) {
+  // Upsert via POST with on-conflict resolution
+  const res = await fetch(
+    `${sb.url}/rest/v1/global_settings`,
+    {
+      method: "POST",
+      headers: {
+        apikey: sb.key,
+        Authorization: `Bearer ${sb.key}`,
+        "Content-Type": "application/json",
+        Prefer: "resolution=merge-duplicates",
+      },
+      body: JSON.stringify({
+        settingKey,
+        settingValue: value,
+        updatedAt: new Date().toISOString(),
+      }),
+    }
+  );
+  if (!res.ok) throw new Error(await res.text());
 }
 
 async function authenticateAdmin(req) {
@@ -240,88 +254,84 @@ export default async function handler(req, res) {
     if (action === "applyTemplate" && req.method === "POST") {
       const template = PROMPT_TEMPLATES.find(t => t.id === body.templateId);
       if (!template) return res.status(400).json({ error: "Vorlage nicht gefunden" });
-      const sql = await getDb();
-      if (sql) {
-        try { await setSetting(sql, "system_prompt", template.prompt); } finally { await sql.end(); }
+      const sb = getSupabase();
+      if (sb) {
+        await setSetting(sb, "system_prompt", template.prompt);
       }
       return res.json({ success: true, prompt: template.prompt });
     }
     if (action === "applyCheckTemplate" && req.method === "POST") {
       const template = CHECK_PROMPT_TEMPLATES.find(t => t.id === body.templateId);
       if (!template) return res.status(400).json({ error: "Vorlage nicht gefunden" });
-      const sql = await getDb();
-      if (sql) {
-        try { await setSetting(sql, "check_system_prompt", template.prompt); } finally { await sql.end(); }
+      const sb = getSupabase();
+      if (sb) {
+        await setSetting(sb, "check_system_prompt", template.prompt);
       }
       return res.json({ success: true, prompt: template.prompt });
     }
 
     // DB-dependent operations
-    const sql = await getDb();
-    if (!sql) {
-      console.error("DB connection returned null. DATABASE_URL set:", !!process.env.DATABASE_URL);
-      return res.status(500).json({ error: "Keine Datenbankverbindung. Bitte DATABASE_URL prüfen." });
+    const sb = getSupabase();
+    if (!sb) {
+      console.error("Supabase config missing. SUPABASE_URL set:", !!process.env.SUPABASE_URL, "SUPABASE_SERVICE_KEY set:", !!process.env.SUPABASE_SERVICE_KEY);
+      return res.status(500).json({ error: "Keine Datenbankverbindung. Bitte SUPABASE_URL und SUPABASE_SERVICE_KEY in Vercel konfigurieren." });
     }
 
-    try {
-      switch (action) {
-        // ── Maßnahmenplan ──
-        case "getSystemPrompt": {
-          const val = await getSetting(sql, "system_prompt");
-          return res.json({ prompt: val || DEFAULT_SYSTEM_PROMPT });
-        }
-        case "setSystemPrompt": {
-          await setSetting(sql, "system_prompt", body.prompt);
-          return res.json({ success: true });
-        }
-        case "resetSystemPrompt": {
-          await setSetting(sql, "system_prompt", DEFAULT_SYSTEM_PROMPT);
-          return res.json({ success: true, prompt: DEFAULT_SYSTEM_PROMPT });
-        }
-        case "getSelectedModel": {
-          const val = await getSetting(sql, "anthropic_model");
-          return res.json({ model: val || DEFAULT_MODEL });
-        }
-        case "setModel": {
-          const valid = AVAILABLE_MODELS.map(m => m.id);
-          if (!valid.includes(body.model)) {
-            return res.status(400).json({ error: "Ungültiges Modell" });
-          }
-          await setSetting(sql, "anthropic_model", body.model);
-          return res.json({ success: true });
-        }
-
-        // ── SIS-Prüfung ──
-        case "getCheckSystemPrompt": {
-          const val = await getSetting(sql, "check_system_prompt");
-          return res.json({ prompt: val || DEFAULT_CHECK_PROMPT });
-        }
-        case "setCheckSystemPrompt": {
-          await setSetting(sql, "check_system_prompt", body.prompt);
-          return res.json({ success: true });
-        }
-        case "resetCheckSystemPrompt": {
-          await setSetting(sql, "check_system_prompt", DEFAULT_CHECK_PROMPT);
-          return res.json({ success: true, prompt: DEFAULT_CHECK_PROMPT });
-        }
-        case "getCheckSelectedModel": {
-          const val = await getSetting(sql, "check_anthropic_model");
-          return res.json({ model: val || DEFAULT_MODEL });
-        }
-        case "setCheckModel": {
-          const valid = AVAILABLE_MODELS.map(m => m.id);
-          if (!valid.includes(body.model)) {
-            return res.status(400).json({ error: "Ungültiges Modell" });
-          }
-          await setSetting(sql, "check_anthropic_model", body.model);
-          return res.json({ success: true });
-        }
-
-        default:
-          return res.status(400).json({ error: "Unbekannte Aktion" });
+    switch (action) {
+      // ── Maßnahmenplan ──
+      case "getSystemPrompt": {
+        const val = await getSetting(sb, "system_prompt");
+        return res.json({ prompt: val || DEFAULT_SYSTEM_PROMPT });
       }
-    } finally {
-      await sql.end();
+      case "setSystemPrompt": {
+        await setSetting(sb, "system_prompt", body.prompt);
+        return res.json({ success: true });
+      }
+      case "resetSystemPrompt": {
+        await setSetting(sb, "system_prompt", DEFAULT_SYSTEM_PROMPT);
+        return res.json({ success: true, prompt: DEFAULT_SYSTEM_PROMPT });
+      }
+      case "getSelectedModel": {
+        const val = await getSetting(sb, "anthropic_model");
+        return res.json({ model: val || DEFAULT_MODEL });
+      }
+      case "setModel": {
+        const valid = AVAILABLE_MODELS.map(m => m.id);
+        if (!valid.includes(body.model)) {
+          return res.status(400).json({ error: "Ungültiges Modell" });
+        }
+        await setSetting(sb, "anthropic_model", body.model);
+        return res.json({ success: true });
+      }
+
+      // ── SIS-Prüfung ──
+      case "getCheckSystemPrompt": {
+        const val = await getSetting(sb, "check_system_prompt");
+        return res.json({ prompt: val || DEFAULT_CHECK_PROMPT });
+      }
+      case "setCheckSystemPrompt": {
+        await setSetting(sb, "check_system_prompt", body.prompt);
+        return res.json({ success: true });
+      }
+      case "resetCheckSystemPrompt": {
+        await setSetting(sb, "check_system_prompt", DEFAULT_CHECK_PROMPT);
+        return res.json({ success: true, prompt: DEFAULT_CHECK_PROMPT });
+      }
+      case "getCheckSelectedModel": {
+        const val = await getSetting(sb, "check_anthropic_model");
+        return res.json({ model: val || DEFAULT_MODEL });
+      }
+      case "setCheckModel": {
+        const valid = AVAILABLE_MODELS.map(m => m.id);
+        if (!valid.includes(body.model)) {
+          return res.status(400).json({ error: "Ungültiges Modell" });
+        }
+        await setSetting(sb, "check_anthropic_model", body.model);
+        return res.json({ success: true });
+      }
+
+      default:
+        return res.status(400).json({ error: "Unbekannte Aktion" });
     }
   } catch (err) {
     console.error("Admin settings error:", err.message, err.stack);
