@@ -258,7 +258,6 @@ export default async function handler(req, res) {
       return res.status(500).json({ error: "Keine Datenbankverbindung. Bitte DATABASE_URL prüfen." });
     }
 
-    try {
       switch (action) {
         // ── Maßnahmenplan ──
         case "getSystemPrompt": {
@@ -315,7 +314,6 @@ export default async function handler(req, res) {
         default:
           return res.status(400).json({ error: "Unbekannte Aktion" });
       }
-    }
   } catch (err) {
     console.error("Admin settings error:", err.message, err.stack);
     return res.status(500).json({ error: err.message || "Server error" });
