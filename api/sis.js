@@ -53,41 +53,31 @@ async function supabaseQuery(sb, path, options = {}) {
   return null;
 }
 
-async function authenticateUser(req) {
-  const cookieHeader = req.headers.cookie || "";
-  console.log("SIS Auth: cookie present:", !!cookieHeader, "has app_session_id:", cookieHeader.includes("app_session_id"));
-  const match = cookieHeader.match(/app_session_id=([^;]+)/);
-  const token = match ? match[1] : null;
-  if (!token) {
-    console.log("SIS Auth: no token found in cookies");
-    return null;
-  }
-
+async function authenticateUser(req, sb) {
   try {
-    const secret = new TextEncoder().encode(process.env.JWT_SECRET || "fallback-secret");
-    const { payload } = await jwtVerify(token, secret, { algorithms: ["HS256"] });
-    console.log("SIS Auth: JWT verified, openId:", payload.openId);
-    if (!payload.openId) return null;
-
-    // Look up user ID from database (same approach as api/auth/me.js)
-    console.log("SIS Auth: DATABASE_URL set:", !!process.env.DATABASE_URL);
-    if (process.env.DATABASE_URL) {
-      const pg = (await import("postgres")).default;
-      const sql = pg(process.env.DATABASE_URL);
-      try {
-        const rows = await sql`SELECT id, "openId", name, email, role FROM users WHERE "openId" = ${payload.openId} LIMIT 1`;
-        await sql.end();
-        console.log("SIS Auth: DB lookup returned", rows.length, "rows");
-        if (rows.length > 0) {
-          return rows[0];
-        }
-      } catch (dbErr) {
-        console.error("SIS Auth: DB lookup failed:", dbErr.message);
-        await sql.end().catch(() => {});
-      }
+    const cookieHeader = req.headers.cookie || "";
+    const match = cookieHeader.match(/app_session_id=([^;]+)/);
+    const token = match ? match[1] : null;
+    if (!token) {
+      console.error("SIS Auth: no token");
+      return null;
     }
 
-    return null;
+    const secret = new TextEncoder().encode(process.env.JWT_SECRET || "fallback-secret");
+    const { payload } = await jwtVerify(token, secret, { algorithms: ["HS256"] });
+    if (!payload.openId) {
+      console.error("SIS Auth: no openId in JWT");
+      return null;
+    }
+
+    // Look up user ID via Supabase REST (same as admin/settings.js pattern)
+    const rows = await supabaseQuery(sb, `users?select=id,role&"openId"=eq.${encodeURIComponent(payload.openId)}&limit=1`);
+    if (!rows || rows.length === 0) {
+      console.error("SIS Auth: user not found for openId:", payload.openId);
+      return null;
+    }
+
+    return { openId: payload.openId, id: rows[0].id, role: rows[0].role };
   } catch (err) {
     console.error("SIS Auth error:", err.message);
     return null;
@@ -178,7 +168,7 @@ export default async function handler(req, res) {
       return res.status(500).json({ error: "Keine Datenbankverbindung" });
     }
 
-    const user = await authenticateUser(req);
+    const user = await authenticateUser(req, sb);
     if (!user) {
       return res.status(401).json({ error: "Nicht angemeldet" });
     }
